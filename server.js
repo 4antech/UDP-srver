@@ -11,7 +11,8 @@ var ts = new Date();
 ///////////////////////my function
 function consolelog(msg){if (debug) console.log(msg);}
 function validation(message){
-  return 1;
+  if (message[0]!=0x7e || message[message.length-1]!=0x7f ) console.log('----');return -1;
+  else return 1;
 };
 function getdata(){};
 function goodanswer(cmd,message){  
@@ -27,7 +28,7 @@ function goodanswer(cmd,message){
   else if (cmd==9) getdata;
   else if (cmd==10) getdata;
 
-  return (command +'good')
+  return (cmd +'good')
 };
 ///////////////////////command processor
 function startcommand(message){
@@ -43,9 +44,11 @@ server.on('message', function (message, remote) {
   ts = new Date();
   consolelog(ts.getTime() + ' ' + remote.address + ':' + remote.port + ' - ' + message);
   var command=message[1];
-  if (validation(message)==0) msgResponse='\0x7e'+ message[1] + '\0x01\0x7f ';//response 4 byte
-  if (validation(message)<0) msgResponse='\0x7e\0x0b\0x01\0x7f ';//response 4 byte
+  var validstatus=validation(message)
+  if (validstatus==0) msgResponse="\x7e"+ message[1] + "\x01\x7f";//bad argument
+  if (validstatus<0) msgResponse="\x7e\x0b\x01\x7f";//bad packet
   else msgResponse=goodanswer(command,message);
+  msgResponse=msgResponse + ':1234';
 ///////// response function
   server.send(msgResponse, 0, msgResponse.length, remote.port, remote.address, function(err, bytes) {
     ts = new Date();
