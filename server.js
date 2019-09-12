@@ -6,14 +6,21 @@ var HOST = '127.0.0.1';
 var dgram = require('dgram');
 var server = dgram.createSocket('udp4');
 ///////////////////////my variables
-var msgResponse="init";
+//var msgResponse="init";
 var ts = new Date();
+var dmsg="";
 ///////////////////////my function
 function consolelog(msg){if (debug) console.log(msg);}
+function hexdump(msg){  
+  var tmp='.';
+  for (var i=0;i<msg.length;i++) tmp+=(msg[i].toString(16)) + '.';
+  return tmp;
+}
+//////////////////////////////////// Verification incoming data
 function validation(cmd,message){
-  var cmd=message[1];
-  if (message[0]!=126 || message[message.length-1]!=127 ) return -1;
+  if (message[0]!=126 || message[message.length-1]!=127 ) return -1;//0x7e 0x7f
 //detection packet size
+  var cmd=message[1];
   if (cmd<0 || cmd>11) return 0; //unknown command
   if (cmd==0 && message.length!=3) return 0; //eror size packet 1+1      +1=3. 
   if (cmd==1 && message.length!=8) return 0; //eror size packet 1+1+ 3+2 +1=8.
@@ -26,20 +33,22 @@ function validation(cmd,message){
   if (cmd==8 && message.length!=4) return 0; //eror size packet 1+1+ 1   +1=4.
   if (cmd==9 && message.length!=3) return 0; //eror size packet 1+1      +1=3.
   if (cmd==10 && message.length!=22) return 0; //eror 1+1+3+3+3+3+1+3+3  +1=22
-///////// packetsize ok!
+///////// packetsize ok! 
+///////// validating argument value range
+//TODO test Big-Litle Endian
   if (cmd==1 || cmd==2){ //                  EL_MOVETO_CMD  +  AZ_MOVETO_CMD
     var target=message[2]*256*256+message[3]*256+message[4];
     var speed=message[5]*256+message[6];
-    if (spped<-1000 || speed>1000 ||target<-524288 ||target>524288)return 0;
+    if (speed<-1000 || speed>1000 ||target<-524288 ||target>524288)return 0;
   } 
   if (cmd==3 || cmd==4){ //                     EL_MOVE_CMD  +  AZ_MOVE_CMD
     var speed=message[2]*256+message[3];
-    if (spped<-1000 || speed>1000)return 0;
+    if (speed<-1000 || speed>1000)return 0;
   } 
   if (cmd==5 || cmd==6){ //                  EL_MOVESTEP_CMD + AZ_MOVESTEP_CMD  
     var step=message[2]*256*256+message[3]*256+message[4];
     var speed=message[5]*256+message[6];
-    if (spped<0 || speed>1000 || step>1048576 ||step<0)return 0;
+    if (speed<0 || speed>1000 || step>1048576 ||step<0)return 0;
   } 
   if (cmd==7 && (message[2]>3 || message[2]<0)) return 0;  //DRIVE_STOP_CMD
   if (cmd==8 && message[2]!=1 && message[2]!=0) return 0;  //AZ_BRAKE_CMD
@@ -66,21 +75,13 @@ function validation(cmd,message){
   }
   return 1;
 };
+/////////////////////////////////////////////////////////////////////////
 function getdata(){};
 function goodanswer(cmd,message){  
+  if (cmd!=0 && cmd!=9) return ('\x7e'+String.fromCharCode(cmd)+'\x00\x7f')  
   if (cmd==0) getdata;
-  else if (cmd==1) getdata;
-  else if (cmd==2) getdata;
-  else if (cmd==3) getdata;
-  else if (cmd==4) getdata;
-  else if (cmd==5) getdata;
-  else if (cmd==6) getdata;
-  else if (cmd==7) getdata;
-  else if (cmd==8) getdata;
-  else if (cmd==9) getdata;
-  else if (cmd==10) getdata;
-
-  return ('['+ cmd +']good data')
+  if (cmd==10) getdata;
+  return ('['+ cmd +']good data') // debug
 };
 ///////////////////////command processor
 function startcommand(message){
@@ -93,19 +94,32 @@ server.on('listening', function () {
   consolelog(ts.getTime() + ' Start UDP Server listening on ' + address.address + ":" + address.port);
 });
 server.on('message', function (message, remote) {
+  var packetResponse=new Buffer('');
+  var msglog='';
   ts = new Date();
-  consolelog(ts.getTime() + ' ' + remote.address + ':' + remote.port + ' - ' + message);
+  consolelog(ts.getTime() + ' rcv from ' + remote.address + ':' + remote.port + ' - [' + hexdump(message) + ']');
   var command=message[1];
   var validstatus=validation(command,message);
-  if (validstatus==0) msgResponse="\x7e"+ message[1] + "\x01\x7f 0";//bad argument
-  if (validstatus<0) msgResponse="\x7e\x0b\x01\x7f -1";//bad packet
-  else msgResponse=goodanswer(command,message);
-//  msgResponse=msgResponse + ':1234';
+  if (validstatus==0) {     //bad argument
+      msgResponse="\x7e"+String.fromCharCode(command)+"\x01\x7f";//String.fromCharCode(command)
+      msglog=("error packet args ["+ hexdump(message) +"]");
+  }
+  if (validstatus<0) {      //bad incoming packet
+    msgResponse="\x7e\x0b\x01\x7f";        
+    msglog=("error packet size:" + message.length +" for this command:["+cmd.toString(16)+"]");  
+  }
+  if (validstatus>0) {      //packet & argument Ok!
+    msgResponse=goodanswer(command,message);
+    msglog=('CMD Ok [' + command + ']');
+  }
+  ts = new Date();
+  consolelog(ts.getTime() + ' ' + msglog +' from ' + remote.address + ':' + remote.port);
+  packetResponse=new Buffer(msgResponse);  
 ///////// response function
-  server.send(msgResponse, 0, msgResponse.length, remote.port, remote.address, function(err, bytes) {
+  server.send(packetResponse, 0, packetResponse.length, remote.port, remote.address, function(err, bytes) {
     ts = new Date();
     if (err) throw err;
-    consolelog(ts.getTime() + ' UDP server message sent to ' + remote.address + ':' + remote.port);
+    consolelog(ts.getTime() + ' snt UDP server message response to ' + remote.address + ':' + remote.port +' [' + hexdump(packetResponse) + ']');
   });  
 });
 
