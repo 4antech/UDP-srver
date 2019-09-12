@@ -1,7 +1,7 @@
 var PORT = 9090;
 var HOST = '127.0.0.1';
 var dgram = require('dgram');
-var message = new Buffer('\x7e' + '\x05\x00\x00' + '\x7f'); //<-----------tut
+var message = new Buffer('\x7e' + '\x09' + '\x7f'); //<-----------tut
 var client = dgram.createSocket('udp4');
 function hexdump(msg){  
   var tmp='.';

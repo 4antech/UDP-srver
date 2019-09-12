@@ -76,12 +76,13 @@ function validation(cmd,message){
   return 1;
 };
 /////////////////////////////////////////////////////////////////////////
-function getdata(){};
+function getdata0(){return "12345678901234567890123456789012"};
+function getdata9(){return "123456789012"};
 function goodanswer(cmd,message){  
   if (cmd!=0 && cmd!=9) return ('\x7e'+String.fromCharCode(cmd)+'\x00\x7f')  
-  if (cmd==0) getdata;
-  if (cmd==10) getdata;
-  return ('['+ cmd +']good data') // debug
+  if (cmd==0) return getdata0();
+  if (cmd==9) return getdata9();
+  return '';
 };
 ///////////////////////command processor
 function startcommand(message){
