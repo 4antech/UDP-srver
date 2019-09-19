@@ -17,12 +17,31 @@ function hexdump(msg){
   return tmp;
 }
 function num2hex1(num){if (num<255) return String.fromCharCode(num); }
+//TODO: dodelat
 function num2hex2(num){
   if (num>65535) 
 }
 function num2hex3(num){
 }
-
+//////////////////// Math
+// Elevation
+const m=1860                ;//              /|
+const n=720                 ;//             / |
+const a=1860                ;//            /  |
+const a2=a*a                ;//           /   |a
+const b=sqrt(m*m+n*n)       ;//         c/    |
+const b2=(m*m+n*n)          ;//         /     |
+const phi=atan2(n,m)        ;//   _____/______|______
+const r =a2 + b2            ;//       /    _/   
+const p =   2*a*b           ;//      /  _/b     n
+const pi_phi=Math.Pi + phi  ;//     /_/       . 
+const pi05_phi=Math.Pi/2 + phi;//         m  
+function alpha(c)  {return (pi_phi   + acos((r-c*c)/p));}
+function zeta(c)   {return (pi05_phi + acos((r-c*c)/p));} // alpha-Pi/2
+//////////////////// Mech
+const shtok_min=720;   // zeta(720)=0.
+const shtok_max=3190;  // zeta(3190)= -30' ; zeta(3180)=+2'
+                       //
 //////////////////////////////////// Verification incoming data
 function validation(cmd,message){
   if (message[0]!=126 || message[message.length-1]!=127 ) return -1;//0x7e 0x7f
@@ -60,10 +79,12 @@ function validation(cmd,message){
   if (cmd==7 && (message[2]>3 || message[2]<0)) return 0;  //DRIVE_STOP_CMD
   if (cmd==8 && message[2]!=1 && message[2]!=0) return 0;  //AZ_BRAKE_CMD
   if (cmd==10){
+//TODO: positive|negative value?  
     var  AZ_SOFTLIMIT_CW   = message[2]*256*256+message[3]*256+message[4];
     var  AZ_SOFTLIMIT_CCW  = message[5]*256*256+message[6]*256+message[7];
     var  EL_SOFTLIMIT_UP   = message[8]*256*256+message[9]*256+message[10];
     var  EL_SOFTLIMIT_DOWN = message[11]*256*256+message[12]*256+message[13];
+  
     var  SOFTLIMITS_MASK   = message[14];
     var  AZ_OFFSET = message[15]*256*256+message[16]*256+message[17];
     var  EL_OFFSET = message[18]*256*256+message[19]*256+message[20];        
@@ -170,8 +191,9 @@ function getdata0(){
 //  [EL_ERRORS]      1
 //  [AZ_BRAKE]       1
 //  ETX              1=7f
-  //      E=21Byte
-  return "12345678901234567890123456789012"
+//      E=21Byte
+    var   tmp='\x7e\x09\x02'+'12345678901234567'+'\x7f';
+  return tmp;
 }; //debug
 function getdata9(){
 /* manual from original:
@@ -217,8 +239,8 @@ ETX - маркер конца пакета данных (код символа 0
 //  [EL_OFFSET]         3
 //  ETX                 1=7f
   // E=23Byte
-  var   tmp='\x7e\x09\x02'++'\x7f';
-  return "123456789012";
+  var   tmp='\x7e\x09\x02'+'1234567890123456789'+'\x7f';
+  return tmp;
 };    //debug
 function goodanswer(cmd,message){  
   if (cmd!=0 && cmd!=9) return ('\x7e'+String.fromCharCode(cmd)+'\x00\x7f')  
@@ -269,8 +291,6 @@ server.on('message', function (message, remote) {
     consolelog(ts.getTime() + ' snt UDP server message response to ' + remote.address + ':' + remote.port +' [' + hexdump(packetResponse) + ']');
   });  
 });
-
-
 server.bind(PORT, HOST);
 consolelog('-----------------------------');
 
