@@ -19,7 +19,7 @@ function hexdump(msg){
 function num2hex1(num){if (num<255) return String.fromCharCode(num); }
 //TODO: dodelat
 function num2hex2(num){
-  if (num>65535) 
+  if (num>65535); 
 }
 function num2hex3(num){
 }
@@ -29,9 +29,9 @@ const m=1860                ;//              /|
 const n=720                 ;//             / |
 const a=1860                ;//            /  |
 const a2=a*a                ;//           /   |a
-const b=sqrt(m*m+n*n)       ;//         c/    |
+const b=Math.sqrt(m*m+n*n)       ;//         c/    |
 const b2=(m*m+n*n)          ;//         /     |
-const phi=atan2(n,m)        ;//   _____/______|______
+const phi=Math.atan2(n,m)        ;//   _____/______|______
 const r =a2 + b2            ;//       /    _/   
 const p =   2*a*b           ;//      /  _/b     n
 const pi_phi=Math.Pi + phi  ;//     /_/       . 
