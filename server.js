@@ -29,15 +29,15 @@ const m=1860                ;//              /|
 const n=720                 ;//             / |
 const a=1860                ;//            /  |
 const a2=a*a                ;//           /   |a
-const b=Math.sqrt(m*m+n*n)       ;//         c/    |
+const b=Math.sqrt(m*m+n*n)  ;//         c/    |
 const b2=(m*m+n*n)          ;//         /     |
-const phi=Math.atan2(n,m)        ;//   _____/______|______
+const phi=Math.atan(n/m)   ;//   _____/______|______
 const r =a2 + b2            ;//       /    _/   
 const p =   2*a*b           ;//      /  _/b     n
-const pi_phi=Math.Pi + phi  ;//     /_/       . 
-const pi05_phi=Math.Pi/2 + phi;//         m  
-function alpha(c)  {return (pi_phi   + acos((r-c*c)/p));}
-function zeta(c)   {return (pi05_phi + acos((r-c*c)/p));} // alpha-Pi/2
+const pi_phi=Math.PI  + phi ;//     /_/       . 
+const pi05_phi=Math.PI/2 + phi;//         m  
+function alpha(c)  {return (pi_phi   - Math.acos((r-c*c)/p));}
+function zeta(c)   {return (pi05_phi - Math.acos((r-c*c)/p));} // alpha-Pi/2
 //////////////////// Mech
 const shtok_min=720;   // zeta(720)=0.
 const shtok_max=3190;  // zeta(3190)= -30' ; zeta(3180)=+2'
@@ -293,4 +293,4 @@ server.on('message', function (message, remote) {
 });
 server.bind(PORT, HOST);
 consolelog('-----------------------------');
-
+for (var i=shtok_min;i<shtok_max;i++) console.log(' '+i+' alp=' +(alpha(i)*180/Math.PI)+' zeta='+(zeta(i)*180/Math.PI));
