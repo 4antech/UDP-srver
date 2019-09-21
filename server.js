@@ -52,14 +52,15 @@ function div2rad(mega){
   else return -1;
 }
 function rad2div(ang){ 
-  return Math.round((Math.PI*2/ang)*1048576);
-  else return -1;
+  if (ang==0) return 0;
+  else return Math.round((Math.PI*2/ang)*1048576);
 }
+function div2rad_neg(mega){ 
+  if (mega>524288 || mega<-524288) console.log("error value for franslate to radian");
+  else  return ((mega*Math.PI*2/1048576)-Math.PI/2);
+}
+function rad2div_neg(ang){return (rad2div(ang+Math.PI/2)-524288);}
 
-function div2radneg(mega){ 
-  if (mega>524288 || mega<-524288) return -1;
-  else  return ((mega*Math.PI*2/1048576)-Math.PI/2)
-}
 
 const shtok_min=720;   // zeta(720)=0.
 const shtok_max=3190;  // zeta(3190)= -30' ; zeta(3180)=+2'
@@ -314,6 +315,10 @@ server.on('message', function (message, remote) {
   });  
 });
 server.bind(PORT, HOST);
+
 consolelog('-----------------------------');
-//for (var i=shtok_min;i<shtok_max;i++) console.log(' '+i+' alp=' +(alpha(i)*180/Math.PI)+' zeta='+(zeta(i)*180/Math.PI));
+//for (var i=shtok_min;i<shtok_max;i++) consolelog(' '+i+' alp=' +(alpha(i)*180/Math.PI)+' zeta='+(zeta(i)*180/Math.PI));
 //console.log(shtoksize(0) + ' ' + shtoksize(Math.PI/2));
+consolelog('rad 0   ='+rad2div(0)+'  0       ='+ div2rad(0));
+consolelog('rad Pi/2='+rad2div(Math.PI/2)+' 524288='+div2rad(524288));
+consolelog('rad Pi  ='+rad2div(Math.PI)+'  1048576='+div2rad(524288+524288));
