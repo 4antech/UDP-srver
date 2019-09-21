@@ -1,5 +1,5 @@
 /// UDP server       ///////////////////////
-var version=190907.1
+var version=190922.1
 var debug=1;
 var PORT = 9090;
 var HOST = '127.0.0.1';
@@ -7,6 +7,9 @@ var dgram = require('dgram');
 var server = dgram.createSocket('udp4');
 ///////////////////////my variables
 //var msgResponse="init";
+var statemove_el = 0;
+var statemove_az = 0;
+
 var ts = new Date();
 var dmsg="";
 ///////////////////////my function
@@ -25,23 +28,42 @@ function num2hex3(num){
 }
 //////////////////// Math
 // Elevation
-const m=1860                ;//              /|
-const n=720                 ;//             / |
-const a=1860                ;//            /  |
-const a2=a*a                ;//           /   |a
-const b=Math.sqrt(m*m+n*n)  ;//         c/    |
-const b2=(m*m+n*n)          ;//         /     |
-const phi=Math.atan(n/m)   ;//   _____/______|______
-const r =a2 + b2            ;//       /    _/   
-const p =   2*a*b           ;//      /  _/b     n
-const pi_phi=Math.PI  + phi ;//     /_/       . 
-const pi05_phi=Math.PI/2 + phi;//         m  
+const m=1860                         ;//              /|
+const n=720                          ;//             / |
+const a=1860                         ;//            /  |
+const a2=a*a                         ;//           /   |a
+const b=Math.sqrt(m*m + n*n)         ;//         c/    |
+const b2=(m*m + n*n)                 ;//         /     |
+const phi=Math.atan2(n,m)            ;//   _____/______|______
+const r = a2 + b2                    ;//       /    _/   
+const p = 2 * a * b                  ;//      /  _/b     n
+const pi_phi =  Math.PI  + phi       ;//     /_/      _| 
+const pi05_phi = Math.PI/2 + phi     ;//         m  
 function alpha(c)  {return (pi_phi   - Math.acos((r-c*c)/p));}
 function zeta(c)   {return (pi05_phi - Math.acos((r-c*c)/p));} // alpha-Pi/2
 //////////////////// Mech
+//  ax2 1 round = 10 mm lenght of shtock
+//  ax2 1 round = ax1 31.738x4.55= 144.4079 Round=144round+146º50'38.4"
+//  1 mm lenght of shtock    = ax1 14.40079 Round=14round+158º41'3.84"
+//  ax1 1444079 = ax2 10000
+//
+function div2rad(mega){ 
+  if (mega>=0 && mega<=1048576) return mega*Math.PI*2/1048576;
+  else return -1;
+}
+function rad2div(ang){ 
+  return Math.round((Math.PI*2/ang)*1048576);
+  else return -1;
+}
+
+function div2radneg(mega){ 
+  if (mega>524288 || mega<-524288) return -1;
+  else  return ((mega*Math.PI*2/1048576)-Math.PI/2)
+}
+
 const shtok_min=720;   // zeta(720)=0.
 const shtok_max=3190;  // zeta(3190)= -30' ; zeta(3180)=+2'
-                       //
+function shtoksize(z){ return Math.sqrt(r - p*Math.cos(pi05_phi-z));} //
 //////////////////////////////////// Verification incoming data
 function validation(cmd,message){
   if (message[0]!=126 || message[message.length-1]!=127 ) return -1;//0x7e 0x7f
@@ -293,4 +315,5 @@ server.on('message', function (message, remote) {
 });
 server.bind(PORT, HOST);
 consolelog('-----------------------------');
-for (var i=shtok_min;i<shtok_max;i++) console.log(' '+i+' alp=' +(alpha(i)*180/Math.PI)+' zeta='+(zeta(i)*180/Math.PI));
+//for (var i=shtok_min;i<shtok_max;i++) console.log(' '+i+' alp=' +(alpha(i)*180/Math.PI)+' zeta='+(zeta(i)*180/Math.PI));
+//console.log(shtoksize(0) + ' ' + shtoksize(Math.PI/2));
