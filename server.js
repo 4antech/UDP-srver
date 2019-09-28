@@ -15,10 +15,14 @@ var dmsg="";
 ///////////////////////my function
 function consolelog(msg){if (debug) console.log(msg);}
 function hexdump(msg){  
-  var tmp='.';
-  for (var i=0;i<msg.length;i++) tmp+=(msg[i].toString(16)) + '.';
-  return tmp;
+  var tmpstr='.';
+  for (var i=0;i<msg.length;i++) {
+    if (msg[i]<16 ) tmpstr+='0'+(msg[i].toString(16)) + '.';
+    else tmpstr+=(msg[i].toString(16)) + '.';
+  }
+  return tmpstr;
 }
+
 function num2hex1(num){if (num<255) return String.fromCharCode(num); }
 //TODO: dodelat
 function num2hex2(num){
@@ -88,7 +92,11 @@ function validation(cmd,message){
   if (cmd==1 || cmd==2){ //                  EL_MOVETO_CMD  +  AZ_MOVETO_CMD
     var target=message[2]*256*256+message[3]*256+message[4];
     var speed=message[5]*256+message[6];
-    if (speed<-1000 || speed>1000 ||target<-524288 ||target>524288)return 0;
+    if (speed<-1000 || speed>1000 ||target<-524288 ||target>524288){
+      ts = new Date();
+      consolelog(ts.getTime() + ' ERROR target='+target +' speed='+ speed);
+      return 0;
+    }
   } 
   if (cmd==3 || cmd==4){ //                     EL_MOVE_CMD  +  AZ_MOVE_CMD
     var speed=message[2]*256+message[3];
@@ -319,6 +327,6 @@ server.bind(PORT, HOST);
 consolelog('-----------------------------');
 //for (var i=shtok_min;i<shtok_max;i++) consolelog(' '+i+' alp=' +(alpha(i)*180/Math.PI)+' zeta='+(zeta(i)*180/Math.PI));
 //console.log(shtoksize(0) + ' ' + shtoksize(Math.PI/2));
-consolelog('rad 0   ='+rad2div(0)+'  0       ='+ div2rad(0));
-consolelog('rad Pi/2='+rad2div(Math.PI/2)+' 524288='+div2rad(524288));
-consolelog('rad Pi  ='+rad2div(Math.PI)+'  1048576='+div2rad(524288+524288));
+//consolelog('rad 0   ='+rad2div(0)+'  0       ='+ div2rad(0));
+//consolelog('rad Pi/2='+rad2div(Math.PI/2)+' 524288='+div2rad(524288));
+//consolelog('rad Pi  ='+rad2div(Math.PI)+'  1048576='+div2rad(524288+524288));
