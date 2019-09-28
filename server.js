@@ -1,5 +1,5 @@
 /// UDP server       ///////////////////////
-var version=190922.1
+var version=190927.1
 var debug=1;
 var PORT = 9090;
 var HOST = '127.0.0.1';
@@ -13,7 +13,13 @@ var statemove_az = 0;
 var ts = new Date();
 var dmsg="";
 ///////////////////////my function
-function consolelog(msg){if (debug) console.log(msg);}
+function consolelog(msg){
+  if (debug) {
+    ts = new Date();
+    console.log(ts.getTime()+' ' + msg);
+  }
+}
+
 function hexdump(msg){  
   var tmpstr='.';
   for (var i=0;i<msg.length;i++) {
@@ -92,12 +98,12 @@ function validation(cmd,message){
   if (cmd==1 || cmd==2){ //                  EL_MOVETO_CMD  +  AZ_MOVETO_CMD
     var target=message[2]*256*256+message[3]*256+message[4];
     var speed=message[5]*256+message[6];
+    consolelog('* cmd=' +cmd +' args: target='+target +' speed='+ speed);        
     if (speed<-1000 || speed>1000 ||target<-524288 ||target>524288){
-      ts = new Date();
-      consolelog(ts.getTime() + ' ERROR target='+target +' speed='+ speed);
+      consolelog('! ERROR target=' + target + ' speed='+ speed);
       return 0;
     }
-  } 
+  }
   if (cmd==3 || cmd==4){ //                     EL_MOVE_CMD  +  AZ_MOVE_CMD
     var speed=message[2]*256+message[3];
     if (speed<-1000 || speed>1000)return 0;
@@ -281,50 +287,47 @@ function goodanswer(cmd,message){
 };
 ///////////////////////command processor
 function startcommand(message){
-  ts = new Date();  
-  consolelog(ts.getTime() + ' start command ' + message[1]);
+
+  consolelog('* start command ' + message[1]);
 };
 ///////////////////////server function
 server.on('listening', function () {
   lastcmd=0;
   var address = server.address();
-  ts = new Date();  
-  consolelog(ts.getTime() + ' Start UDP Server listening on ' + address.address + ":" + address.port);
+  consolelog('* Start UDP Server listening on ' + address.address + ":" + address.port);
 });
 server.on('message', function (message, remote) {
   var packetResponse=new Buffer('');
   var msglog='';
-  ts = new Date();
-  consolelog(ts.getTime() + ' rcv from ' + remote.address + ':' + remote.port + ' - [' + hexdump(message) + ']');
+  consolelog('< rcv from ' + remote.address + ':' + remote.port + ' - [' + hexdump(message) + ']');
   var command=message[1];
   var validstatus=validation(command,message);
   if (validstatus==0) {     //bad argument
       msgResponse="\x7e"+String.fromCharCode(command)+"\x01\x7f";//String.fromCharCode(command)
-      msglog=("error packet args ["+ hexdump(message) +"]");
+      msglog=("! Error packet args ["+ hexdump(message) +"]");
   }
   if (validstatus<0) {      //bad incoming packet
     msgResponse="\x7e\x0b\x01\x7f";        
-    msglog=("error packet size:" + message.length +" for this command:["+cmd.toString(16)+"]");  
+    msglog=("! error packet size:" + message.length +" for this command:["+cmd.toString(16)+"]");  
   }
   if (validstatus>0) {      //packet & argument Ok!
     msgResponse=goodanswer(command,message);
-    msglog=('CMD Ok [' + command + ']');
+    msglog=('* CMD Ok [' + command + ']');
     startcommand(message);
 //    lastcmd=message;
   }
-  ts = new Date();
-  consolelog(ts.getTime() + ' ' + msglog +' from ' + remote.address + ':' + remote.port);
+  consolelog('< ' + msglog +' from ' + remote.address + ':' + remote.port);
   packetResponse=new Buffer(msgResponse);  
 ///////// response function
   server.send(packetResponse, 0, packetResponse.length, remote.port, remote.address, function(err, bytes) {
-    ts = new Date();
     if (err) throw err;
-    consolelog(ts.getTime() + ' snt UDP server message response to ' + remote.address + ':' + remote.port +' [' + hexdump(packetResponse) + ']');
+    consolelog('> snt UDP server message response to ' + remote.address + ':' + remote.port +' [' + hexdump(packetResponse) + ']');
+    consolelog('____________');
   });  
 });
 server.bind(PORT, HOST);
 
-consolelog('-----------------------------');
+console.log('-----------------------------');
 //for (var i=shtok_min;i<shtok_max;i++) consolelog(' '+i+' alp=' +(alpha(i)*180/Math.PI)+' zeta='+(zeta(i)*180/Math.PI));
 //console.log(shtoksize(0) + ' ' + shtoksize(Math.PI/2));
 //consolelog('rad 0   ='+rad2div(0)+'  0       ='+ div2rad(0));
