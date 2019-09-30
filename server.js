@@ -2,7 +2,8 @@
 var version=190927.1
 var debug=1;
 var PORT = 9090;
-var HOST = '127.0.0.1';
+//var HOST = '172.22.22.102';
+var HOST='127.0.0.1';
 var dgram = require('dgram');
 var server = dgram.createSocket('udp4');
 ///////////////////////my variables
@@ -96,8 +97,14 @@ function validation(cmd,message){
 ///////// validating argument value range
 //TODO test Big-Litle Endian
   if (cmd==1 || cmd==2){ //                  EL_MOVETO_CMD  +  AZ_MOVETO_CMD
-    var target=message[2]*256*256+message[3]*256+message[4];
-    var speed=message[5]*256+message[6];
+
+    var target=(message[2]*256*256) + (message[3]*256) + message[4];
+    if (message[2]>127) target=-(0x1000000-target);
+
+    var speed=(message[5]*256) + message[6];
+    if (message[5]>127) speed=-(0x10000-speed);
+    
+
     consolelog('* cmd=' +cmd +' args: target='+target +' speed='+ speed);        
     if (speed<-1000 || speed>1000 ||target<-524288 ||target>524288){
       consolelog('! ERROR target=' + target + ' speed='+ speed);
@@ -109,8 +116,8 @@ function validation(cmd,message){
     if (speed<-1000 || speed>1000)return 0;
   } 
   if (cmd==5 || cmd==6){ //                  EL_MOVESTEP_CMD + AZ_MOVESTEP_CMD  
-    var step=message[2]*256*256+message[3]*256+message[4];
-    var speed=message[5]*256+message[6];
+    var step=(message[2]*256*256) + (message[3]*256) + message[4];
+    var speed=(message[5]*256)+message[6];
     if (speed<0 || speed>1000 || step>1048576 ||step<0)return 0;
   } 
   if (cmd==7 && (message[2]>3 || message[2]<0)) return 0;  //DRIVE_STOP_CMD
@@ -312,8 +319,8 @@ server.on('message', function (message, remote) {
   }
   if (validstatus>0) {      //packet & argument Ok!
     msgResponse=goodanswer(command,message);
-    msglog=('* CMD Ok [' + command + ']');
     startcommand(message);
+    msglog=('* CMD Ok [' + command + ']');
 //    lastcmd=message;
   }
   consolelog('< ' + msglog +' from ' + remote.address + ':' + remote.port);
