@@ -1,5 +1,5 @@
 /// UDP server       ///////////////////////
-var version=190927.1
+var version=191001.1
 var debug=1;
 var PORT = 9090;
 //var HOST = '172.22.22.102';
@@ -97,17 +97,34 @@ function validation(cmd,message){
 
 ///////// validating argument value range
 //TODO test Big-Litle Endian
-  if (cmd==1 || cmd==2){ //                  EL_MOVETO_CMD  +  AZ_MOVETO_CMD
+  if (cmd==1){ //    AZ_MOVETO_CMD
+    var target=(message[2]*256*256) + (message[3]*256) + message[4];
+//    if (message[2]>127) target=-(0x1000000-target);
+    var speed=(message[5]*256) + message[6];
+//    if (message[5]>127) speed=-(0x10000-speed);
+    consolelog('* cmd=' +cmd +' args: target='+target +' speed='+ speed);        
+    if (speed<0 || speed>1000 ||target<0 ||target>1048576){
+      consolelog('! ERROR target=' + target + ' speed='+ speed);
+      return 0;
+    }
+  }
+  if (cmd==2){ //   EL_MOVETO_CMD
     var target=(message[2]*256*256) + (message[3]*256) + message[4];
     if (message[2]>127) target=-(0x1000000-target);
     var speed=(message[5]*256) + message[6];
-    if (message[5]>127) speed=-(0x10000-speed);
+  //  if (message[5]>127) speed=-(0x10000-speed);
     consolelog('* cmd=' +cmd +' args: target='+target +' speed='+ speed);        
     if (speed<-1000 || speed>1000 ||target<-524288 ||target>524288){
       consolelog('! ERROR target=' + target + ' speed='+ speed);
       return 0;
     }
   }///// CMD01 & CMD 02 testeted with myclient
+  
+  
+  
+  
+  
+  
   
   if (cmd==3 || cmd==4){ //                     EL_MOVE_CMD  +  AZ_MOVE_CMD
     var speed=message[2]*256+message[3];
@@ -140,20 +157,18 @@ function validation(cmd,message){
     if (message[15]>127) AZ_OFFSET=-(0x1000000-AZ_OFFSET);
     if (message[15]>127) EL_OFFSET=-(0x1000000-EL_OFFSET);
 
-    if (AZ_SOFTLIMIT_CW < 0 || 
-      AZ_SOFTLIMIT_CW > 1048576 ||
-      AZ_SOFTLIMIT_CCW < 0 || 
-      AZ_SOFTLIMIT_CCW >1048576  ||
-
-      EL_SOFTLIMIT_UP < -524288 ||
-      EL_SOFTLIMIT_UP > 524288  ||
+    if (AZ_SOFTLIMIT_CW < 0       || 
+      AZ_SOFTLIMIT_CW > 1048576   ||
+      AZ_SOFTLIMIT_CCW < 0        || 
+      AZ_SOFTLIMIT_CCW >1048576   ||
+      EL_SOFTLIMIT_UP < -524288   ||
+      EL_SOFTLIMIT_UP > 524288    ||
       EL_SOFTLIMIT_DOWN < -524288 ||
       EL_SOFTLIMIT_DOWN > 524288  ||
-
-      SOFTLIMITS_MASK <0 ||
-      SOFTLIMITS_MASK >15 ||       
+      SOFTLIMITS_MASK <0   ||
+      SOFTLIMITS_MASK >15  ||       
       EL_OFFSET < -1048576 ||
-      EL_OFFSET > 1048576
+      EL_OFFSET > 1048576  ||
       AZ_OFFSET < -1048576 ||
       AZ_OFFSET > 1048576 )
       
@@ -300,39 +315,138 @@ ETX - маркер конца пакета данных (код символа 0
   var   tmp='\x7e\x09\x02'+'1234567890123456789'+'\x7f';
   return tmp;
 };    //debug
-function goodanswer(cmd,message){  
+function xstop(){statemove_az=0;}
+function ystop(){statemove_el=0;}
+function xgoto(target,speed){statemove_az=1;}
+function ygoto(target,speed){statemove_el=1;}
+
+function xdelta(angle,speed){}
+function xdelta(angle,speed){}
+
+function goodanswer(cmd){  
   if (cmd!=0 && cmd!=9) return ('\x7e'+String.fromCharCode(cmd)+'\x00\x7f')  
   if (cmd==0) return getdata0();
   if (cmd==9) return getdata9();
   return '';
-};
+}
 ///////////////////////command processor
+
 function startcommand(message){
 
   consolelog('* start command ' + message[1]);
+  if (message[1]==0){}            // GETSTATUS_CMD
+
+  else if (message[1]==1) {       // [AZ_MOVETO_CMD] [TARGET] [SPEED] 
+                                  // TARGET - 3 байта, 
+                                  //значения в диапазоне 0 ... 1048576, 
+                                  //соответствующие углам 0 ... 360°
+                                  // SPEED 2 байта, значения в диапазоне 0..1000
+     var target=(message[2]*256*256) + (message[3]*256) + message[4];
+     var speed=(message[5]*256) + message[6];
+     if (statemove_az) xstop;
+     statemove_az; 
+     xgoto(target,speed)                             
+  }
+  else if (message[1]==2) {       // [EL_MOVETO_CMD] [TARGET] [SPEED]
+                                  //3 байта, 
+                                  //значения в диапазоне -524288..524288, 
+                                  //соответствующие углам -180° ... 180°
+     var target=(message[2]*256*256) + (message[3]*256) + message[4];
+     if (message[2]>127) target=-(0x1000000 - target);
+     var speed=(message[5]*256) + message[6];
+     if (statemove_el) ystop;
+     statemove_el; 
+     ygoto(target,speed)                             
+  }
+  else if (message[1]==3) {       // [AZ_MOVE_CMD]  [SPEED]
+                                  // SPEED 2 байта,       
+                                  // значения в диапазоне -1000 ... 1000,
+                                  // соответствуют требуемой величине скорости в %*10
+                                  // значение 0 означает остановку привода
+    var speed=(message[2]*256) + message[3];
+    if (message[2]>127) speed=-(0x10000-speed);
+    if (speed==0) xstop;
+    else {  
+      if (speed<0) {target=0;speed=-speed;}
+      else if (speed<0) target=1048576;
+      if (statemove_az!=0) xstop;
+      xgoto(target,speed);
+    }
+  }  
+  else if (message[1]==4) {       // [EL_MOVE_CMD]  [SPEED]
+    var speed=(message[2]*256) + message[3];
+    if (message[2]>127) speed=-(0x10000-speed);
+    if (speed==0) ystop;
+    else {  
+      if (speed<0) {target=0;speed=-speed;}
+      else if (speed<0) target=1048576;
+      if (statemove_el!=0) ystop;
+      ygoto(target,speed);
+    }
+  }
+
+//TODO: ->
+  else if (message[1]==5) {       // [AZ_MOVESTEP_CMD]  [STEP] [SPEED]
+                                  // STEP 3 байта, 
+                                  // значения в диапазоне -1048576 ... 1048576, 
+                                  // соответствующие углам -360° ... 360°
+                                  // SPEED 2 байта,       
+                                  // значения в диапазоне 0 ... 1000, 
+                                  // значение 0 соответствует скорости, автоматически 
+                                  // устанавливаемой и регулируемой контроллером, 
+                                  // остальные значения соответствуют требуемой 
+                                  // величине скорости в %*10
+  }
+  else if (message[1]==6) {       // [EL_MOVESTEP_CMD]  [STEP] [SPEED]
+  }
+
+  else if (message[1]==7) {       // [DRIVE_STOP_CMD] [DRIVES_MASK] 1 байт, 
+                                  // бит 0 соответствует азимутальному приводу,
+                                  // бит 1 соответствует угломестному приводу.
+                                  // Значение какого-либо из упомянутых выше бит, 
+                                  // равное 1, означает останов соответствующего 
+                                  // привода, значение, равное 0, игнорируется
+  }
+  else if (message[1]==8) {       // [AZ_BRAKE_CMD] [CTRL_PARAM]
+                                  // установка значения 0х01 приводит к включению 
+                                  // тормоза, установка значения 0х00 приводит к 
+                                  // выключению тормоза
+  }
+  else if (message[1]==9) {       // [GETSYSPARAMS_CMD]
+  }
+  else if (message[1]==10) {      // [SETSYSPARAMS_CMD]   [AZ_SOFTLIMIT_CW ]  
+                                  // [AZ_SOFTLIMIT_СCW]  [EL_SOFTLIMIT_UP] 
+                                  // [EL_SOFTLIMIT_DOWN]  [SOFTLIMITS_MASK]  
+                                  // [AZ_OFFSET]  [EL_OFFSET]
+  }
 };
 ///////////////////////server function
 server.on('listening', function () {
   lastcmd=0;
   var address = server.address();
-  consolelog('* Start UDP Server listening on ' + address.address + ":" + address.port);
+  consolelog('* Start UDP Server listening on ' + 
+  address.address + ":" + 
+  address.port);
 });
 server.on('message', function (message, remote) {
   var packetResponse=new Buffer('');
   var msglog='';
-  consolelog('< rcv from ' + remote.address + ':' + remote.port + ' - [' + hexdump(message) + ']');
+  consolelog('< rcv from ' + remote.address + ':' + remote.port + 
+  ' - [' + hexdump(message) + ']');
   var command=message[1];
   var validstatus=validation(command,message);
   if (validstatus==0) {     //bad argument
-      msgResponse="\x7e"+String.fromCharCode(command)+"\x01\x7f";//String.fromCharCode(command)
+      msgResponse="\x7e" + String.fromCharCode(command ) + 
+      "\x01\x7f";//String.fromCharCode(command)
       msglog=("! Error packet args ["+ hexdump(message) +"]");
   }
   if (validstatus<0) {      //bad incoming packet
     msgResponse="\x7e\x0b\x01\x7f";        
-    msglog=("! error packet size:" + message.length +" for this command:["+cmd.toString(16)+"]");  
+    msglog=("! error packet size:" + message.length +" for this command:["+
+      cmd.toString(16)+"]");  
   }
   if (validstatus>0) {      //packet & argument Ok!
-    msgResponse=goodanswer(command,message);
+    msgResponse=goodanswer(command);
     startcommand(message);
     msglog=('* CMD Ok [' + command + ']');
 //    lastcmd=message;
@@ -340,9 +454,11 @@ server.on('message', function (message, remote) {
   consolelog('< ' + msglog +' from ' + remote.address + ':' + remote.port);
   packetResponse=new Buffer(msgResponse);  
 ///////// response function
-  server.send(packetResponse, 0, packetResponse.length, remote.port, remote.address, function(err, bytes) {
+  server.send(packetResponse, 0, packetResponse.length, remote.port, 
+  remote.address, function(err, bytes) {
     if (err) throw err;
-    consolelog('> snt UDP server message response to ' + remote.address + ':' + remote.port +' [' + hexdump(packetResponse) + ']');
+    consolelog('> snt UDP server message response to ' + remote.address + ':' + 
+      remote.port +' [' + hexdump(packetResponse) + ']');
     consolelog('____________');
   });  
 });
