@@ -81,7 +81,7 @@ function validation(cmd,message){
   if (message[0]!=126 || message[message.length-1]!=127 ) return -1;//0x7e 0x7f
 //detection packet size
   var cmd=message[1];
-  if (cmd<0 || cmd>11) return 0; //unknown command
+  if (cmd<0 || cmd>10) return 0; //unknown command
   if (cmd==0 && message.length!=3) return 0; //eror size packet 1+1      +1=3. 
   if (cmd==1 && message.length!=8) return 0; //eror size packet 1+1+ 3+2 +1=8.
   if (cmd==2 && message.length!=8) return 0; //eror size packet 1+1+ 3+2 +1=8.
@@ -94,56 +94,70 @@ function validation(cmd,message){
   if (cmd==9 && message.length!=3) return 0; //eror size packet 1+1      +1=3.
   if (cmd==10 && message.length!=22) return 0; //eror 1+1+3+3+3+3+1+3+3  +1=22
 ///////// packetsize ok! 
+
 ///////// validating argument value range
 //TODO test Big-Litle Endian
   if (cmd==1 || cmd==2){ //                  EL_MOVETO_CMD  +  AZ_MOVETO_CMD
-
     var target=(message[2]*256*256) + (message[3]*256) + message[4];
     if (message[2]>127) target=-(0x1000000-target);
-
     var speed=(message[5]*256) + message[6];
     if (message[5]>127) speed=-(0x10000-speed);
-    
-
     consolelog('* cmd=' +cmd +' args: target='+target +' speed='+ speed);        
     if (speed<-1000 || speed>1000 ||target<-524288 ||target>524288){
       consolelog('! ERROR target=' + target + ' speed='+ speed);
       return 0;
     }
-  }
+  }///// CMD01 & CMD 02 testeted with myclient
+  
   if (cmd==3 || cmd==4){ //                     EL_MOVE_CMD  +  AZ_MOVE_CMD
     var speed=message[2]*256+message[3];
+    if (message[5]>127) speed=-(0x10000-speed);
     if (speed<-1000 || speed>1000)return 0;
   } 
+  
   if (cmd==5 || cmd==6){ //                  EL_MOVESTEP_CMD + AZ_MOVESTEP_CMD  
     var step=(message[2]*256*256) + (message[3]*256) + message[4];
     var speed=(message[5]*256)+message[6];
     if (speed<0 || speed>1000 || step>1048576 ||step<0)return 0;
   } 
+  
   if (cmd==7 && (message[2]>3 || message[2]<0)) return 0;  //DRIVE_STOP_CMD
   if (cmd==8 && message[2]!=1 && message[2]!=0) return 0;  //AZ_BRAKE_CMD
+
   if (cmd==10){
 //TODO: positive|negative value?  
     var  AZ_SOFTLIMIT_CW   = message[2]*256*256+message[3]*256+message[4];
     var  AZ_SOFTLIMIT_CCW  = message[5]*256*256+message[6]*256+message[7];
     var  EL_SOFTLIMIT_UP   = message[8]*256*256+message[9]*256+message[10];
-    var  EL_SOFTLIMIT_DOWN = message[11]*256*256+message[12]*256+message[13];
-  
+    if (message[8]>127) EL_SOFTLIMIT_UP=-(0x1000000-EL_SOFTLIMIT_UP);
+
+    var  EL_SOFTLIMIT_DOWN = message[11]*256*256+message[12]*256+message[13];  
+    if (message[11]>127) EL_SOFTLIMIT_DOWN=-(0x1000000-EL_SOFTLIMIT_DOWN);
+
     var  SOFTLIMITS_MASK   = message[14];
     var  AZ_OFFSET = message[15]*256*256+message[16]*256+message[17];
     var  EL_OFFSET = message[18]*256*256+message[19]*256+message[20];        
+    if (message[15]>127) AZ_OFFSET=-(0x1000000-AZ_OFFSET);
+    if (message[15]>127) EL_OFFSET=-(0x1000000-EL_OFFSET);
+
     if (AZ_SOFTLIMIT_CW < 0 || 
       AZ_SOFTLIMIT_CW > 1048576 ||
       AZ_SOFTLIMIT_CCW < 0 || 
       AZ_SOFTLIMIT_CCW >1048576  ||
+
       EL_SOFTLIMIT_UP < -524288 ||
       EL_SOFTLIMIT_UP > 524288  ||
       EL_SOFTLIMIT_DOWN < -524288 ||
       EL_SOFTLIMIT_DOWN > 524288  ||
+
       SOFTLIMITS_MASK <0 ||
       SOFTLIMITS_MASK >15 ||       
+      EL_OFFSET < -1048576 ||
+      EL_OFFSET > 1048576
       AZ_OFFSET < -1048576 ||
-      AZ_OFFSET > 1048576 ) return 0;
+      AZ_OFFSET > 1048576 )
+      
+       return 0;
   }
   return 1;
 };
