@@ -18,6 +18,7 @@ var  AZ_SOFTLIMIT_CW   = 0;
 var  AZ_SOFTLIMIT_CCW  = 0;
 var  EL_SOFTLIMIT_UP   = 0;
 var  EL_SOFTLIMIT_DOWN = 0;
+var  SOFTLIMITS_MASK
 var  AZ_OFFSET = 0;
 var  EL_OFFSET = 0;
 
@@ -315,10 +316,33 @@ ETX - маркер конца пакета данных (код символа 0
 //  [EL_OFFSET]         3
 //  ETX                 1=7f
   // E=23Byte
+  var outstr = new Buffer(23)
+  outstr[0]=0x7e;
+  outstr[1]=9;
+  outstr[2]=2;
+  outstr[3]= ( AZ_SOFTLIMIT_CW & 0x00ff0000)>>16;
+  outstr[4]= ( AZ_SOFTLIMIT_CW & 0x0000ff00)>>8;
+  outstr[5]= ( AZ_SOFTLIMIT_CW & 0x000000ff);
+  outstr[6]= ( AZ_SOFTLIMIT_CCW & 0x00ff0000)>>16;
+  outstr[7]= ( AZ_SOFTLIMIT_CCW & 0x0000ff00)>>8;
+  outstr[8]= ( AZ_SOFTLIMIT_CCW & 0x000000ff);
+  outstr[9]= ( EL_SOFTLIMIT_UP & 0x00ff0000)>>16;
+  outstr[10]=( EL_SOFTLIMIT_UP & 0x0000ff00)>>8;
+  outstr[11]=( EL_SOFTLIMIT_UP & 0x000000ff);
+  outstr[12]=( EL_SOFTLIMIT_DOWN & 0x00ff0000)>>16;
+  outstr[13]=( EL_SOFTLIMIT_DOWN & 0x0000ff00)>>8;
+  outstr[14]=( EL_SOFTLIMIT_DOWN & 0x000000ff);
+  outstr[15]=( SOFTLIMITS_MASK & 0b00001111);   
+  outstr[16]=( AZ_OFFSET & 0x00ff0000)>>16;
+  outstr[17]=( AZ_OFFSET & 0x0000ff00)>>8;
+  outstr[18]=( AZ_OFFSET & 0x000000ff);
+  outstr[19]=( EL_OFFSET & 0x00ff0000)>>16;
+  outstr[20]=( EL_OFFSET & 0x0000ff00)>>8;
+  outstr[21]=( EL_OFFSET & 0x000000ff);
+  outstr[22]=0x7f;
   
-  
-  var   tmp='\x7e\x09\x02'+'1234567890123456789'+'\x7f';
-  return tmp;
+//  var   tmp='\x7e\x09\x02'+'1234567890123456789'+'\x7f';
+  return outstr;
 };    //debug
 function xstop(){statemove_az=0;}
 function ystop(){statemove_el=0;}
@@ -452,11 +476,11 @@ function startcommand(message){
                                   // Значения: 1-ВКЛ  0-ВЫКЛ  
                                   // [AZ_OFFSET]      3 bytes -1048576..1048576   
                                   // [EL_OFFSET]      3 bytes -1048576..1048576
-    var SOFTLIMITS_MASK   = message[14];
-    var cw=SOFTLIMITS_MASK  &  1; // bit 0
-    var ccw=SOFTLIMITS_MASK &  2; // bit 1
-    var up=SOFTLIMITS_MASK  &  4; // bit 2
-    var down=SOFTLIMITS_MASK & 8; // bit 3  
+    SOFTLIMITS_MASK   = message[14];
+    var cw =(SOFTLIMITS_MASK  & 0b00000001); // bit 0
+    var ccw=(SOFTLIMITS_MASK  & 0b00000010); // bit 1
+    var up =(SOFTLIMITS_MASK  & 0b00000100); // bit 2
+    var down=(SOFTLIMITS_MASK & 0b00001000); // bit 3  
     consolelog('* bit-mask: cw:'+ cw +' ccw:'+ ccw +' up:' + up +' down:'+down);
         
     if (cw) {                              
