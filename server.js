@@ -10,6 +10,7 @@ var server = dgram.createSocket('udp4');
 //var msgResponse="init";
 var statemove_el = 0;
 var statemove_az = 0;
+
 var statebrake_el = 0;
 var statebrake_az = 0;
 
@@ -321,8 +322,8 @@ function xstop(){statemove_az=0;}
 function ystop(){statemove_el=0;}
 function xgoto(target,speed){statemove_az=1;}
 function ygoto(target,speed){statemove_el=1;}
-function xbarke(){}
-function ybarke(){}
+function xbarke(arg){}
+function ybarke(arg){}
 
 function xdelta(angle,speed){}
 function xdelta(angle,speed){}
@@ -447,24 +448,40 @@ function startcommand(message){
     var ccw=SOFTLIMITS_MASK &  2; // bit 1
     var up=SOFTLIMITS_MASK  &  4; // bit 2
     var down=SOFTLIMITS_MASK & 8; // bit 3  
-    AZ_OFFSET = message[15]*256*256+message[16]*256+message[17];
-    EL_OFFSET = message[18]*256*256+message[19]*256+message[20];        
+    consolelog('* bit-mask: cw:'+ cw +' ccw:'+ ccw +' up:' + up +' down:'+down);
+        
     if (cw) {                              
       AZ_SOFTLIMIT_CW   = message[2]*256*256+message[3]*256+message[4];
-      if (message[8]>127) EL_SOFTLIMIT_UP=-(0x1000000-EL_SOFTLIMIT_UP);
-    }
+//      if (message[8]>127) AZ_SOFTLIMIT_CW=-(0x1000000-AZ_SOFTLIMIT_CW);
+    } else AZ_SOFTLIMIT_CW=0;
+    consolelog('* set new AZ_SOFTLIMIT_CW='+AZ_SOFTLIMIT_CW);
+    
     if (ccw) {
       AZ_SOFTLIMIT_CCW  = message[5]*256*256+message[6]*256+message[7];
-      if (message[11]>127) EL_SOFTLIMIT_DOWN=-(0x1000000-EL_SOFTLIMIT_DOWN);
-    }
+//      if (message[5]>127) AZ_SOFTLIMIT_CCW=-(0x1000000-AZ_SOFTLIMIT_CCW);
+    } else AZ_SOFTLIMIT_CCW=0;
+    consolelog('* set new AZ_SOFTLIMIT_CCW='+AZ_SOFTLIMIT_CCW);
+    
     if (up) {
       EL_SOFTLIMIT_UP   = message[8]*256*256+message[9]*256+message[10];
-      if (message[15]>127) AZ_OFFSET=-(0x1000000-AZ_OFFSET);
-    }
+      if (message[8]>127) EL_SOFTLIMIT_UP=-(0x1000000-EL_SOFTLIMIT_UP);
+    } else EL_SOFTLIMIT_UP=0;
+    consolelog('* set new EL_SOFTLIMIT_UP='+EL_SOFTLIMIT_UP);
+
     if (down){ 
       EL_SOFTLIMIT_DOWN = message[11]*256*256+message[12]*256+message[13];  
-      if (message[18]>127) EL_OFFSET=-(0x1000000-EL_OFFSET);
-    }  
+      if (message[11]>127) EL_OFFSET=-(0x1000000-EL_OFFSET);
+    } else EL_SOFTLIMIT_DOWN=0;
+    consolelog('* set new EL_SOFTLIMIT_DOWN='+EL_SOFTLIMIT_DOWN);
+
+    AZ_OFFSET = message[15]*256*256+message[16]*256+message[17];
+    if (message[15]>127) AZ_OFFSET=-(0x1000000-AZ_OFFSET);
+    consolelog('* set new AZ_OFFSET='+AZ_OFFSET);
+    
+    EL_OFFSET = message[18]*256*256+message[19]*256+message[20];        
+    if (message[18]>127) EL_OFFSET=-(0x1000000-EL_OFFSET);
+    consolelog('* set new EL_OFFSET='+EL_OFFSET);
+
   }
 };
 ///////////////////////server function
