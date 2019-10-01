@@ -8,7 +8,7 @@ var dgram = require('dgram');
 
 var incmd = 2; // 0..11
 var target = -1000;
-var speed  = 100; 
+var speed  = -100; 
 var cmd =incmd.toString(16); // 00..0a
 
 var message = new Buffer(8)

@@ -315,6 +315,8 @@ ETX - маркер конца пакета данных (код символа 0
 //  [EL_OFFSET]         3
 //  ETX                 1=7f
   // E=23Byte
+  
+  
   var   tmp='\x7e\x09\x02'+'1234567890123456789'+'\x7f';
   return tmp;
 };    //debug
@@ -329,7 +331,14 @@ function xdelta(angle,speed){}
 function xdelta(angle,speed){}
 
 function goodanswer(cmd){  
-  if (cmd!=0 && cmd!=9) return ('\x7e'+String.fromCharCode(cmd)+'\x00\x7f')  
+  if (cmd!=0 && cmd!=9) {
+    var answer = new Buffer(4)
+    answer[0]=0x7e;
+    answer[1]=cmd;
+    answer[2]=0;
+    answer[3]=0x7f;
+    return answer; //('\x7e'+String.fromCharCode(cmd)+'\x00\x7f')  
+  }
   if (cmd==0) return getdata0();
   if (cmd==9) return getdata9();
   return '';
@@ -516,6 +525,7 @@ server.on('message', function (message, remote) {
   }
   consolelog(msglog +' from ' + remote.address + ':' + remote.port);
   packetResponse=new Buffer(msgResponse);  
+  
 ///////// response function
   server.send(packetResponse, 0, packetResponse.length, remote.port, 
   remote.address, function(err, bytes) {
