@@ -14,13 +14,66 @@ var statemove_az = 0;
 var statebrake_el = 0;
 var statebrake_az = 0;
 
-var  AZ_SOFTLIMIT_CW   = 0;
-var  AZ_SOFTLIMIT_CCW  = 0;
-var  EL_SOFTLIMIT_UP   = 0;
-var  EL_SOFTLIMIT_DOWN = 0;
-var  SOFTLIMITS_MASK
-var  AZ_OFFSET = 0;
-var  EL_OFFSET = 0;
+var  AZ_SOFTLIMIT_CW   = 10;
+var  AZ_SOFTLIMIT_CCW  = 20;
+var  EL_SOFTLIMIT_UP   = 30;
+var  EL_SOFTLIMIT_DOWN = 40;
+var  SOFTLIMITS_MASK =15;
+var  AZ_OFFSET = 60;
+var  EL_OFFSET = 70;
+
+function xstop(){statemove_az=0;}
+function ystop(){statemove_el=0;}
+function xgoto(target,speed){statemove_az=1;}
+function ygoto(target,speed){statemove_el=1;}
+function xbrake(arg){}
+function ybrake(arg){}
+function xdelta(angle,speed){}
+function xdelta(angle,speed){}
+
+function AZ_COORD(){        // 3 bytes
+  return 100
+}
+
+function EL_COORD(){        // 3 bytes
+  return 100
+}
+
+function AZ_SPEED() {       // 2 bytes
+  return 10
+}
+
+function EL_SPEED()  {      // 2 bytes                                                 
+  return 100
+}
+
+function AZ_DRIVESTATE(){   // 1 bytes
+  return 32
+}
+
+function EL_DRIVESTATE(){   // 1 bytes
+  return 32
+}
+
+function AZ_LIMITS(){       // 1 bytes
+  return 32
+}
+
+function EL_LIMITS(){       // 1 bytes
+  return 32
+}
+
+function AZ_ERRORS(){       // 1 bytes
+  return 32
+}
+
+function EL_ERRORS(){       // 1 bytes
+  return 32
+}
+
+function AZ_BRAKE() {       // 1 bytes
+  return 32
+}
 
 var ts = new Date();
 var dmsg="";
@@ -89,21 +142,28 @@ const shtok_max=3190;  // zeta(3190)= -30' ; zeta(3180)=+2'
 function shtoksize(z){ return Math.sqrt(r - p*Math.cos(pi05_phi-z));} //
 //////////////////////////////////// Verification incoming data
 function validation(cmd,message){
+//detection START-END Bytes 0x7e 0x7f
   if (message[0]!=126 || message[message.length-1]!=127 ) return -1;//0x7e 0x7f
-//detection packet size
+
+//detection command number. valid range 0..10
   var cmd=message[1];
   if (cmd<0 || cmd>10) return 0; //unknown command
-  if (cmd==0 && message.length!=3) return 0; //eror size packet 1+1      +1=3. 
-  if (cmd==1 && message.length!=8) return 0; //eror size packet 1+1+ 3+2 +1=8.
-  if (cmd==2 && message.length!=8) return 0; //eror size packet 1+1+ 3+2 +1=8.
-  if (cmd==3 && message.length!=5) return 0; //eror size packet 1+1+ 2   +1=5.
-  if (cmd==4 && message.length!=5) return 0; //eror size packet 1+1+ 2   +1=5.
-  if (cmd==5 && message.length!=8) return 0; //eror size packet 1+1+ 3+2 +1=8.
-  if (cmd==6 && message.length!=8) return 0; //eror size packet 1+1+ 3+2 +1=8.
-  if (cmd==7 && message.length!=4) return 0; //eror size packet 1+1+ 1   +1=4.
-  if (cmd==8 && message.length!=4) return 0; //eror size packet 1+1+ 1   +1=4.
-  if (cmd==9 && message.length!=3) return 0; //eror size packet 1+1      +1=3.
-  if (cmd==10 && message.length!=22) return 0; //eror 1+1+3+3+3+3+1+3+3  +1=22
+
+//detection packet size
+//  var cmdsize=[3,8,8,5,5,8,8,4,4,3,22];
+//  if (cmdsize.cmd != message.length ) return 0; 
+//var cmdargs=[0,2,2,1,1,2,2,1,1,0,7];  
+  if (cmd==0 && message.length!=3) return 0; //eror size packet 1+1      +1=3. 0
+  if (cmd==1 && message.length!=8) return 0; //eror size packet 1+1+ 3+2 +1=8. 2
+  if (cmd==2 && message.length!=8) return 0; //eror size packet 1+1+ 3+2 +1=8. 2
+  if (cmd==3 && message.length!=5) return 0; //eror size packet 1+1+ 2   +1=5. 1
+  if (cmd==4 && message.length!=5) return 0; //eror size packet 1+1+ 2   +1=5. 1
+  if (cmd==5 && message.length!=8) return 0; //eror size packet 1+1+ 3+2 +1=8. 2
+  if (cmd==6 && message.length!=8) return 0; //eror size packet 1+1+ 3+2 +1=8. 2
+  if (cmd==7 && message.length!=4) return 0; //eror size packet 1+1+ 1   +1=4. 1
+  if (cmd==8 && message.length!=4) return 0; //eror size packet 1+1+ 1   +1=4. 1
+  if (cmd==9 && message.length!=3) return 0; //eror size packet 1+1      +1=3. 0
+  if (cmd==10 && message.length!=22) return 0; //eror 1+1+3+3+3+3+1+3+3  +1=22 7
 ///////// packetsize ok! 
 
 ///////// validating argument value range
@@ -116,9 +176,11 @@ function validation(cmd,message){
     consolelog('* cmd=' +cmd +' args: target='+target +' speed='+ speed);        
     if (speed<0 || speed>1000 ||target<0 ||target>1048576){
       consolelog('! ERROR target=' + target + ' speed='+ speed);
+      consolelog('! Valid args range: speed=[0..1000] target=[0..1048576]');
       return 0;
     }
   }
+  
   if (cmd==2){ //   EL_MOVETO_CMD
     var target=(message[2]*256*256) + (message[3]*256) + message[4];
     if (message[2]>127) target=-(0x1000000-target);
@@ -126,7 +188,8 @@ function validation(cmd,message){
   //  if (message[5]>127) speed=-(0x10000-speed);
     consolelog('* cmd=' +cmd +' args: target='+target +' speed='+ speed);        
     if (speed<-1000 || speed>1000 ||target<-524288 ||target>524288){
-      consolelog('! ERROR target=' + target + ' speed='+ speed);
+      consolelog('! ERROR  Args! target=' + target + ' speed='+ speed);
+      consolelog('! Valid args range: speed=[-1000..1000] target=[-524288..524288]');
       return 0;
     }
   }
@@ -134,33 +197,67 @@ function validation(cmd,message){
   if (cmd==3 || cmd==4){ //                     EL_MOVE_CMD  +  AZ_MOVE_CMD
     var speed=message[2]*256+message[3];
     if (message[5]>127) speed=-(0x10000-speed);
-    if (speed<-1000 || speed>1000)return 0;
-  } 
-  
+    consolelog('* cmd=' +cmd +' args: speed='+ speed);        
+    if (speed<-1000 || speed>1000)
+    {
+      consolelog('! ERROR Args! speed='+ speed +' Valid speed[-1000..1000]');        
+      return 0;
+    }
+  }
+   
   if (cmd==5 || cmd==6){ //                  EL_MOVESTEP_CMD + AZ_MOVESTEP_CMD  
     var step=(message[2]*256*256) + (message[3]*256) + message[4];
     var speed=(message[5]*256)+message[6];
-    if (speed<0 || speed>1000 || step>1048576 ||step<0)return 0;
-  } 
+    consolelog('* cmd=' + cmd +' args: speed=' + speed + ' step=' + step);        
+    if (speed<0 || speed>1000 || step>1048576 ||step<0){
+      consolelog('! ERROR Args! Valid speed[-1000..1000] step[0..1048576]');        
+      return 0;
+    }
+  }
+   
+  if (cmd==7){
+    consolelog('* cmd=' +cmd +' args:'+ message[2].toString(2));        
+    if (message[2]>3 || message[2]<0) {
+      consolelog('! ERROR Args! STOP mask='+ message[2].toString(2) +' Valid mask[00..11]');
+      return 0;  //DRIVE_STOP_CMD
+    }
+  }
   
-  if (cmd==7 && (message[2]>3 || message[2]<0)) return 0;  //DRIVE_STOP_CMD
-  if (cmd==8 && message[2]!=1 && message[2]!=0) return 0;  //AZ_BRAKE_CMD
-
+  if (cmd==8){
+    consolelog('* cmd=' +cmd +' args:'+ message[2].toString(2));        
+    if (message[2]!=1 && message[2]!=0){
+      consolelog('! ERROR Args! BRAKE mask='+ message[2].toString(2) +' Valid mask[00..01]');
+      return 0;  //AZ_BRAKE_CMD
+    }
+  }
+  
   if (cmd==10){
-//TODO: positive|negative value?  
+//TODO: TEST positive|negative value?
+    consolelog('* cmd=' + cmd +' args:');   
+    
     var  AZ_SOFTLIMIT_CW   = message[2]*256*256+message[3]*256+message[4];
+    consolelog('- AZ_SOFTLIMIT_CW='+AZ_SOFTLIMIT_CW);
+    
     var  AZ_SOFTLIMIT_CCW  = message[5]*256*256+message[6]*256+message[7];
+    consolelog('- AZ_SOFTLIMIT_CCW='+AZ_SOFTLIMIT_CCW);
+    
     var  EL_SOFTLIMIT_UP   = message[8]*256*256+message[9]*256+message[10];
     if (message[8]>127) EL_SOFTLIMIT_UP=-(0x1000000-EL_SOFTLIMIT_UP);
+    consolelog('- EL_SOFTLIMIT_UP='+EL_SOFTLIMIT_UP);
 
     var  EL_SOFTLIMIT_DOWN = message[11]*256*256+message[12]*256+message[13];  
     if (message[11]>127) EL_SOFTLIMIT_DOWN=-(0x1000000-EL_SOFTLIMIT_DOWN);
+    consolelog('- EL_SOFTLIMIT_DOWN='+EL_SOFTLIMIT_DOWN);
 
     var  SOFTLIMITS_MASK   = message[14];
+    consolelog('- SOFTLIMITS_MASK='+SOFTLIMITS_MASK.toString(2));
+    
     var  AZ_OFFSET = message[15]*256*256+message[16]*256+message[17];
     var  EL_OFFSET = message[18]*256*256+message[19]*256+message[20];        
     if (message[15]>127) AZ_OFFSET=-(0x1000000-AZ_OFFSET);
     if (message[18]>127) EL_OFFSET=-(0x1000000-EL_OFFSET);
+    consolelog('- AZ_OFFSET='+AZ_OFFSET);
+    consolelog('- EL_OFFSET='+EL_OFFSET);
 
     if (AZ_SOFTLIMIT_CW < 0       || 
       AZ_SOFTLIMIT_CW > 1048576   ||
@@ -175,13 +272,20 @@ function validation(cmd,message){
       EL_OFFSET < -1048576 ||
       EL_OFFSET > 1048576  ||
       AZ_OFFSET < -1048576 ||
-      AZ_OFFSET > 1048576 )   
+      AZ_OFFSET > 1048576 ){   
+      consolelog('! ERROR Args valid range!'); 
+      consolelog('! AZ_SOFTLIMIT_CW & AZ_SOFTLIMIT_CCW [0..1048576]'); 
+      consolelog('! EL_SOFTLIMIT_UP & EL_SOFTLIMIT_DOWN [-524288..524288]'); 
+      consolelog('! SOFTLIMIT_MASK [0..1111] bin'); 
+      consolelog('! EL_OFFSET AZ_OFFSET [-1048576..1048576]'); 
       return 0;
+    }
   }
   return 1;
 };
 /////////////////////////////////////////////////////////////////////////
 function getdata0(){
+//TODO 
 /*
 0-STX=0x7E STX  - маркер начала пакета данных (код символа 0x7E)
 1-GETSTATUS_CMD=0x00
@@ -340,19 +444,17 @@ ETX - маркер конца пакета данных (код символа 0
   outstr[20]=( EL_OFFSET & 0x0000ff00)>>8;
   outstr[21]=( EL_OFFSET & 0x000000ff);
   outstr[22]=0x7f;
-  
+  consolelog('+ cmd N9');
+  consolelog('+ AZ_SOFTLIMIT_CW='+AZ_SOFTLIMIT_CW);
+  consolelog('+ AZ_SOFTLIMIT_CCW='+AZ_SOFTLIMIT_CCW);
+  consolelog('+ EL_SOFTLIMIT_UP='+EL_SOFTLIMIT_UP);
+  consolelog('+ EL_SOFTLIMIT_DOWN='+EL_SOFTLIMIT_DOWN);
+  consolelog('+ SOFTLIMITS_MASK='+SOFTLIMITS_MASK.toString(2));
+  consolelog('+ AZ_OFFSET='+AZ_OFFSET);
+  consolelog('+ EL_OFFSET='+EL_OFFSET);    
 //  var   tmp='\x7e\x09\x02'+'1234567890123456789'+'\x7f';
   return outstr;
 };    //debug
-function xstop(){statemove_az=0;}
-function ystop(){statemove_el=0;}
-function xgoto(target,speed){statemove_az=1;}
-function ygoto(target,speed){statemove_el=1;}
-function xbarke(arg){}
-function ybarke(arg){}
-
-function xdelta(angle,speed){}
-function xdelta(angle,speed){}
 
 function goodanswer(cmd){  
   if (cmd!=0 && cmd!=9) {
@@ -423,7 +525,9 @@ function startcommand(message){
     }
   }
 
+
 //TODO: ->
+//FIXME
   else if (message[1]==5) {       // [AZ_MOVESTEP_CMD]  [STEP] [SPEED]
                                   // STEP 3 байта, 
                                   // значения в диапазоне -1048576..1048576, 
@@ -461,7 +565,8 @@ function startcommand(message){
     xbrake(message[2]);
   }
   else if (message[1]==9) {       // [GETSYSPARAMS_CMD]
-//////////TODO:
+//////////TODO :
+///
   }
   else if (message[1]==10) {      // [SETSYSPARAMS_CMD]   
                                   //[AZ_SOFTLIMIT_CW ]  3 bytes 0..1048576
@@ -540,7 +645,7 @@ server.on('message', function (message, remote) {
   if (validstatus<0) {      //bad incoming packet
     msgResponse="\x7e\x0b\x01\x7f";        
     msglog=("! error packet size:" + message.length +" for this command:["+
-      cmd.toString(16)+"]");  
+      command.toString(16)+"]");  
   }
   if (validstatus>0) {      //packet & argument Ok!
     msglog=('* CMD Ok [' + command + ']');

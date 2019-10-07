@@ -5,7 +5,7 @@ var ver='190930-01'
 var PORT = 9090;
 var HOST='127.0.0.1';
 var dgram = require('dgram');
-var maxtime=3000;
+var maxtime=300;
 var g_cnt=maxtime;
 var delta=0;
 var reqinsec=0;
@@ -45,7 +45,7 @@ function hexdump(msg){
   }
   return tmpstr;
 }
-consolelog('* Client start (Generator random request).');
+consolelog('* Client start.');
 function dumb(cnt){
 //  consolelog(maxtime+1-cnt);
   g_cnt=cnt;
