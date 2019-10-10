@@ -68,7 +68,7 @@ console.log(ts.getTime()+ ' Client start.');
 client.send(message, 0, message.length, PORT, HOST, function(err, bytes) {
   if (err) throw err;
   ts = new Date();
-  console.log(ts.getTime()+' Start command [GETSYSPARAMS_CMD] N'+ incmd +'('+cmd+') args:' );
+  console.log(ts.getTime()+' Start command [SETSYSPARAMS_CMD] N'+ incmd +'('+cmd+') args:' );
   consolelog('- AZ_SOFTLIMIT_CW='+AZ_SOFTLIMIT_CW);
   consolelog('- AZ_SOFTLIMIT_CCW='+AZ_SOFTLIMIT_CCW);
   consolelog('- EL_SOFTLIMIT_UP='+EL_SOFTLIMIT_UP);

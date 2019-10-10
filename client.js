@@ -3,9 +3,9 @@
 var debug=1;
 var ver='190930-01'
 var PORT = 9090;
-var HOST='127.0.0.1';
+var HOST='192.168.9.200';
 var dgram = require('dgram');
-var maxtime=3000;
+var maxtime=300;
 var g_cnt=maxtime;
 var delta=0;
 var reqinsec=0;

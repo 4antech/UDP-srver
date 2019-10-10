@@ -373,7 +373,7 @@ function getdata0(){
 //  [AZ_BRAKE]       1
 //  ETX              1=7f
 //      E=21Byte
-    var   tmp='\x7e\x09\x02'+'12345678901234567'+'\x7f';
+    var   tmp='\x7e\x00\x02'+'12345678901234567'+'\x7f';
   return tmp;
 }; //debug
 function getdata9(){
@@ -583,9 +583,9 @@ function startcommand(message){
                                   // [EL_OFFSET]      3 bytes -1048576..1048576
     SOFTLIMITS_MASK   = message[14];
     var cw =(SOFTLIMITS_MASK  & 0b00000001); // bit 0
-    var ccw=(SOFTLIMITS_MASK  & 0b00000010); // bit 1
-    var up =(SOFTLIMITS_MASK  & 0b00000100); // bit 2
-    var down=(SOFTLIMITS_MASK & 0b00001000); // bit 3  
+    var ccw=(SOFTLIMITS_MASK  & 0b00000010)>>1; // bit 1
+    var up =(SOFTLIMITS_MASK  & 0b00000100)>>2; // bit 2
+    var down=(SOFTLIMITS_MASK & 0b00001000)>>3; // bit 3  
     consolelog('* bit-mask: cw:'+ cw +' ccw:'+ ccw +' up:' + up +' down:'+down);
         
     if (cw) {                              

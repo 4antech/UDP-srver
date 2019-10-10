@@ -7,8 +7,6 @@ var HOST='127.0.0.1';
 
 var dgram = require('dgram');
 var incmd = 0; // 0..11
-var target = -1000;
-var speed  = -100; 
 var cmd =incmd.toString(16); // 00..0a
 if (cmd<15) cmd='0' + cmd;
 var cmdname=['GETSTATUS_CMD',  //no args
