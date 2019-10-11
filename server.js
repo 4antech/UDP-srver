@@ -6,7 +6,15 @@ var PORT = 9090;
 var HOST='127.0.0.1';
 var dgram = require('dgram');
 var server = dgram.createSocket('udp4');
+///////////////////////my function
+function consolelog(msg){
+  if (debug) {
+    ts = new Date();
+    console.log(ts.getTime()+'. ' + msg);
+  }
+}
 ///////////////////////my variables
+
 //var msgResponse="init";
 var statemove_el = 0;
 var statemove_az = 0;
@@ -77,14 +85,7 @@ function AZ_BRAKE() {       // 1 bytes
 
 var ts = new Date();
 var dmsg="";
-///////////////////////my function
-function consolelog(msg){
-  if (debug) {
-    ts = new Date();
-    console.log(ts.getTime()+' ' + msg);
-  }
-}
-
+///////////////////////////////////////////////////////
 function hexdump(msg){  
   var tmpstr='.';
   for (var i=0;i<msg.length;i++) {
@@ -169,9 +170,9 @@ function validation(cmd,message){
 ///////// validating argument value range
 //TODO test Big-Litle Endian
   if (cmd==1){ //    AZ_MOVETO_CMD
-    var target=(message[2]*256*256) + (message[3]*256) + message[4];
+    var target=(message[4]*256*256) + (message[3]*256) + message[2];
 //    if (message[2]>127) target=-(0x1000000-target);
-    var speed=(message[5]*256) + message[6];
+    var speed=(message[6]*256) + message[5];
 //    if (message[5]>127) speed=-(0x10000-speed);
     consolelog('* cmd=' +cmd +' args: target='+target +' speed='+ speed);        
     if (speed<0 || speed>1000 ||target<0 ||target>1048576){
@@ -182,9 +183,9 @@ function validation(cmd,message){
   }
   
   if (cmd==2){ //   EL_MOVETO_CMD
-    var target=(message[2]*256*256) + (message[3]*256) + message[4];
-    if (message[2]>127) target=-(0x1000000-target);
-    var speed=(message[5]*256) + message[6];
+    var target=(message[4]*256*256) + (message[3]*256) + message[2];
+    if (message[4]>127) target=-(0x1000000-target);
+    var speed=(message[6]*256) + message[5];
   //  if (message[5]>127) speed=-(0x10000-speed);
     consolelog('* cmd=' +cmd +' args: target='+target +' speed='+ speed);        
     if (speed<-1000 || speed>1000 ||target<-524288 ||target>524288){
@@ -195,8 +196,8 @@ function validation(cmd,message){
   }
   
   if (cmd==3 || cmd==4){ //                     EL_MOVE_CMD  +  AZ_MOVE_CMD
-    var speed=message[2]*256+message[3];
-    if (message[5]>127) speed=-(0x10000-speed);
+    var speed=message[3]*256+message[2];
+    if (message[3]>127) speed=-(0x10000-speed);
     consolelog('* cmd=' +cmd +' args: speed='+ speed);        
     if (speed<-1000 || speed>1000)
     {
@@ -206,10 +207,12 @@ function validation(cmd,message){
   }
    
   if (cmd==5 || cmd==6){ //                  EL_MOVESTEP_CMD + AZ_MOVESTEP_CMD  
-    var step=(message[2]*256*256) + (message[3]*256) + message[4];
-    var speed=(message[5]*256)+message[6];
+    var step=(message[4]*256*256) + (message[3]*256) + message[2];
+    if (message[4]>127) step=-(0x1000000-step);
+    var speed=(message[6]*256)+message[5];
+    if (message[6]>127) speed=-(0x10000-speed);
     consolelog('* cmd=' + cmd +' args: speed=' + speed + ' step=' + step);        
-    if (speed<0 || speed>1000 || step>1048576 ||step<0){
+    if (speed<-1000 || speed>1000 || step>1048576 ||step<0){
       consolelog('! ERROR Args! Valid speed[-1000..1000] step[0..1048576]');        
       return 0;
     }
@@ -235,27 +238,27 @@ function validation(cmd,message){
 //TODO: TEST positive|negative value?
     consolelog('* cmd=' + cmd +' args:');   
     
-    var  AZ_SOFTLIMIT_CW   = message[2]*256*256+message[3]*256+message[4];
+    var  AZ_SOFTLIMIT_CW   = message[4]*256*256+message[3]*256+message[2];
     consolelog('- AZ_SOFTLIMIT_CW='+AZ_SOFTLIMIT_CW);
     
-    var  AZ_SOFTLIMIT_CCW  = message[5]*256*256+message[6]*256+message[7];
+    var  AZ_SOFTLIMIT_CCW  = message[7]*256*256+message[6]*256+message[5];
     consolelog('- AZ_SOFTLIMIT_CCW='+AZ_SOFTLIMIT_CCW);
     
-    var  EL_SOFTLIMIT_UP   = message[8]*256*256+message[9]*256+message[10];
-    if (message[8]>127) EL_SOFTLIMIT_UP=-(0x1000000-EL_SOFTLIMIT_UP);
+    var  EL_SOFTLIMIT_UP   = message[10]*256*256+message[9]*256+message[8];
+    if (message[10]>127) EL_SOFTLIMIT_UP=-(0x1000000-EL_SOFTLIMIT_UP);
     consolelog('- EL_SOFTLIMIT_UP='+EL_SOFTLIMIT_UP);
 
-    var  EL_SOFTLIMIT_DOWN = message[11]*256*256+message[12]*256+message[13];  
-    if (message[11]>127) EL_SOFTLIMIT_DOWN=-(0x1000000-EL_SOFTLIMIT_DOWN);
+    var  EL_SOFTLIMIT_DOWN = message[13]*256*256+message[12]*256+message[11];  
+    if (message[13]>127) EL_SOFTLIMIT_DOWN=-(0x1000000-EL_SOFTLIMIT_DOWN);
     consolelog('- EL_SOFTLIMIT_DOWN='+EL_SOFTLIMIT_DOWN);
 
     var  SOFTLIMITS_MASK   = message[14];
     consolelog('- SOFTLIMITS_MASK='+SOFTLIMITS_MASK.toString(2));
     
-    var  AZ_OFFSET = message[15]*256*256+message[16]*256+message[17];
-    var  EL_OFFSET = message[18]*256*256+message[19]*256+message[20];        
-    if (message[15]>127) AZ_OFFSET=-(0x1000000-AZ_OFFSET);
-    if (message[18]>127) EL_OFFSET=-(0x1000000-EL_OFFSET);
+    var  AZ_OFFSET = message[17]*256*256+message[16]*256+message[15];
+    var  EL_OFFSET = message[20]*256*256+message[19]*256+message[18];        
+    if (message[17]>127) AZ_OFFSET=-(0x1000000-AZ_OFFSET);
+    if (message[20]>127) EL_OFFSET=-(0x1000000-EL_OFFSET);
     consolelog('- AZ_OFFSET='+AZ_OFFSET);
     consolelog('- EL_OFFSET='+EL_OFFSET);
 
@@ -424,25 +427,25 @@ ETX - маркер конца пакета данных (код символа 0
   outstr[0]=0x7e;
   outstr[1]=9;
   outstr[2]=2;
-  outstr[3]= ( AZ_SOFTLIMIT_CW & 0x00ff0000)>>16;
+  outstr[3]= ( AZ_SOFTLIMIT_CW & 0x000000ff);
   outstr[4]= ( AZ_SOFTLIMIT_CW & 0x0000ff00)>>8;
-  outstr[5]= ( AZ_SOFTLIMIT_CW & 0x000000ff);
-  outstr[6]= ( AZ_SOFTLIMIT_CCW & 0x00ff0000)>>16;
+  outstr[5]= ( AZ_SOFTLIMIT_CW & 0x00ff0000)>>16;
+  outstr[6]= ( AZ_SOFTLIMIT_CCW & 0x000000ff);
   outstr[7]= ( AZ_SOFTLIMIT_CCW & 0x0000ff00)>>8;
-  outstr[8]= ( AZ_SOFTLIMIT_CCW & 0x000000ff);
-  outstr[9]= ( EL_SOFTLIMIT_UP & 0x00ff0000)>>16;
+  outstr[8]= ( AZ_SOFTLIMIT_CCW & 0x00ff0000)>>16;
+  outstr[9]=( EL_SOFTLIMIT_UP & 0x000000ff);  
   outstr[10]=( EL_SOFTLIMIT_UP & 0x0000ff00)>>8;
-  outstr[11]=( EL_SOFTLIMIT_UP & 0x000000ff);
-  outstr[12]=( EL_SOFTLIMIT_DOWN & 0x00ff0000)>>16;
+  outstr[11]= ( EL_SOFTLIMIT_UP & 0x00ff0000)>>16;
+  outstr[12]=( EL_SOFTLIMIT_DOWN & 0x000000ff);
   outstr[13]=( EL_SOFTLIMIT_DOWN & 0x0000ff00)>>8;
-  outstr[14]=( EL_SOFTLIMIT_DOWN & 0x000000ff);
+  outstr[14]=( EL_SOFTLIMIT_DOWN & 0x00ff0000)>>16;  
   outstr[15]=( SOFTLIMITS_MASK & 0b00001111);   
-  outstr[16]=( AZ_OFFSET & 0x00ff0000)>>16;
+  outstr[16]=( AZ_OFFSET & 0x000000ff);
   outstr[17]=( AZ_OFFSET & 0x0000ff00)>>8;
-  outstr[18]=( AZ_OFFSET & 0x000000ff);
-  outstr[19]=( EL_OFFSET & 0x00ff0000)>>16;
-  outstr[20]=( EL_OFFSET & 0x0000ff00)>>8;
-  outstr[21]=( EL_OFFSET & 0x000000ff);
+  outstr[18]=( AZ_OFFSET & 0x00ff0000)>>16;
+  outstr[19]=( EL_OFFSET & 0x000000ff);
+  outstr[20]=( EL_OFFSET & 0x0000ff00)>>8;  
+  outstr[21]=( EL_OFFSET & 0x00ff0000)>>16;
   outstr[22]=0x7f;
   consolelog('+ cmd N9');
   consolelog('+ AZ_SOFTLIMIT_CW='+AZ_SOFTLIMIT_CW);
@@ -481,8 +484,8 @@ function startcommand(message){
                                   //значения в диапазоне 0 ... 1048576, 
                                   //соответствующие углам 0 ... 360°
                                   // SPEED 2 байта, значения в диапазоне 0..1000
-     var target=(message[2]*256*256) + (message[3]*256) + message[4];
-     var speed=(message[5]*256) + message[6];
+     var target=(message[4]*256*256) + (message[3]*256) + message[2];
+     var speed=(message[6]*256) + message[5];
      if (statemove_az) xstop();
      statemove_az; 
      xgoto(target,speed)                             
@@ -491,11 +494,11 @@ function startcommand(message){
                                   //3 байта, 
                                   //значения в диапазоне -524288..524288, 
                                   //соответствующие углам -180° ... 180°
-     var target=(message[2]*256*256) + (message[3]*256) + message[4];
-     if (message[2]>127) target=-(0x1000000 - target);
-     var speed=(message[5]*256) + message[6];
+     var target=(message[4]*256*256) + (message[3]*256) + message[2];
+     if (message[4]>127) target=-(0x1000000 - target);
+     var speed=(message[6]*256) + message[5];
      if (statemove_el) ystop();
-     statemove_el; 
+     statemove_el=1; 
      ygoto(target,speed)                             
   }
   else if (message[1]==3) {       // [AZ_MOVE_CMD]  [SPEED]
@@ -503,23 +506,23 @@ function startcommand(message){
                                   // значения в диапазоне -1000 ... 1000,
                                   // соответствуют требуемой величине скорости в %*10
                                   // значение 0 означает остановку привода
-    var speed=(message[2]*256) + message[3];
-    if (message[2]>127) speed=-(0x10000-speed);
+    var speed=(message[3]*256) + message[2];
+    if (message[3]>127) speed=-(0x10000-speed);
     if (speed==0) xstop();
     else {  
-      if (speed<0) {target=0;speed=-speed;}
-      else if (speed<0) target=1048576;
+      if (speed<0) target=0;
+      else if (speed>0) target=1048576;
       if (statemove_az!=0) xstop();
       xgoto(target,speed);
     }
   }  
   else if (message[1]==4) {       // [EL_MOVE_CMD]  [SPEED]
-    var speed=(message[2]*256) + message[3];
-    if (message[2]>127) speed=-(0x10000-speed);
+    var speed=(message[3]*256) + message[2];
+    if (message[3]>127) speed=-(0x10000-speed);
     if (speed==0) ystop();
     else {  
-      if (speed<0) {target=0;speed=-speed;}
-      else if (speed<0) target=1048576;
+      if (speed<0) target=0;
+      else if (speed>0) target=1048576;
       if (statemove_el!=0) ystop();
       ygoto(target,speed);
     }
@@ -538,10 +541,10 @@ function startcommand(message){
                                   // устанавливаемой и регулируемой контроллером, 
                                   // остальные значения соответствуют требуемой 
                                   // величине скорости в %*10
-     var step =(message[2]*256*256) + (message[3]*256) + message[4];
+     var step =(message[4]*256*256) + (message[3]*256) + message[2];
      if (message[2]>127) step=-(0x1000000 - step);
-     var speed=(message[5]*256) + message[6];
-     if (message[5]>127) speed=-(0x10000-speed);
+     var speed=(message[6]*256) + message[5];
+     if (message[6]>127) speed=-(0x10000-speed);
   }
   else if (message[1]==6) {       // [EL_MOVESTEP_CMD]  [STEP] [SPEED]
     
@@ -589,35 +592,35 @@ function startcommand(message){
     consolelog('* bit-mask: cw:'+ cw +' ccw:'+ ccw +' up:' + up +' down:'+down);
         
     if (cw) {                              
-      AZ_SOFTLIMIT_CW   = message[2]*256*256+message[3]*256+message[4];
+      AZ_SOFTLIMIT_CW   = message[4]*256*256+message[3]*256+message[2];
 //      if (message[8]>127) AZ_SOFTLIMIT_CW=-(0x1000000-AZ_SOFTLIMIT_CW);
     } else AZ_SOFTLIMIT_CW=0;
     consolelog('* set new AZ_SOFTLIMIT_CW='+AZ_SOFTLIMIT_CW);
     
     if (ccw) {
-      AZ_SOFTLIMIT_CCW  = message[5]*256*256+message[6]*256+message[7];
+      AZ_SOFTLIMIT_CCW  = message[7]*256*256+message[6]*256+message[5];
 //      if (message[5]>127) AZ_SOFTLIMIT_CCW=-(0x1000000-AZ_SOFTLIMIT_CCW);
     } else AZ_SOFTLIMIT_CCW=0;
     consolelog('* set new AZ_SOFTLIMIT_CCW='+AZ_SOFTLIMIT_CCW);
     
     if (up) {
-      EL_SOFTLIMIT_UP   = message[8]*256*256+message[9]*256+message[10];
-      if (message[8]>127) EL_SOFTLIMIT_UP=-(0x1000000-EL_SOFTLIMIT_UP);
+      EL_SOFTLIMIT_UP   = message[10]*256*256+message[9]*256+message[8];
+      if (message[10]>127) EL_SOFTLIMIT_UP=-(0x1000000-EL_SOFTLIMIT_UP);
     } else EL_SOFTLIMIT_UP=0;
     consolelog('* set new EL_SOFTLIMIT_UP='+EL_SOFTLIMIT_UP);
 
     if (down){ 
-      EL_SOFTLIMIT_DOWN = message[11]*256*256+message[12]*256+message[13];  
-      if (message[11]>127) EL_OFFSET=-(0x1000000-EL_OFFSET);
+      EL_SOFTLIMIT_DOWN = message[13]*256*256+message[12]*256+message[11];  
+      if (message[13]>127) EL_SOFTLIMIT_DOWN=-(0x1000000-EL_SOFTLIMIT_DOWN);
     } else EL_SOFTLIMIT_DOWN=0;
     consolelog('* set new EL_SOFTLIMIT_DOWN='+EL_SOFTLIMIT_DOWN);
 
-    AZ_OFFSET = message[15]*256*256+message[16]*256+message[17];
-    if (message[15]>127) AZ_OFFSET=-(0x1000000-AZ_OFFSET);
+    AZ_OFFSET = message[17]*256*256+message[16]*256+message[15];
+    if (message[17]>127) AZ_OFFSET=-(0x1000000-AZ_OFFSET);
     consolelog('* set new AZ_OFFSET='+AZ_OFFSET);
     
-    EL_OFFSET = message[18]*256*256+message[19]*256+message[20];        
-    if (message[18]>127) EL_OFFSET=-(0x1000000-EL_OFFSET);
+    EL_OFFSET = message[20]*256*256+message[19]*256+message[18];        
+    if (message[20]>127) EL_OFFSET=-(0x1000000-EL_OFFSET);
     consolelog('* set new EL_OFFSET='+EL_OFFSET);
 
   }

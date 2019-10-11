@@ -4,15 +4,14 @@ var HOST='127.0.0.1';
 
 var dgram = require('dgram');
 var incmd = 3; // 0..11
-var target = 20000;
-var speed  = 333; 
+var speed  = -333; 
 var cmd =incmd.toString(16); // 00..0a
 
 var message = new Buffer(5)
 message[0]=0x7e;
 message[1]=incmd;
-message[2]=(speed  & 0xff00)>>8;
-message[3]=speed   & 0x00ff;
+message[3]=(speed  & 0xff00)>>8;
+message[2]=speed   & 0x00ff;
 message[4]=0x7f;
 
 var client = dgram.createSocket('udp4');

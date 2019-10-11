@@ -7,10 +7,10 @@ var incmd = 10; // 0..11
 
 var  AZ_SOFTLIMIT_CW   = 10;
 var  AZ_SOFTLIMIT_CCW  = 20;
-var  EL_SOFTLIMIT_UP   = 33;
-var  EL_SOFTLIMIT_DOWN = 44;
+var  EL_SOFTLIMIT_UP   = -33;
+var  EL_SOFTLIMIT_DOWN = -44;
 var  SOFTLIMITS_MASK   = 0b000001111;
-var  AZ_OFFSET = 100;
+var  AZ_OFFSET = -100;
 var  EL_OFFSET = -100;
  
 function consolelog(msg){
@@ -26,31 +26,32 @@ var cmd =incmd.toString(16); // 00..0a
 var message = new Buffer(22);
 message[0]=0x7e;
 message[1]=incmd;
-message[2]=(AZ_SOFTLIMIT_CW & 0x00ff0000)>>16;
+message[4]=(AZ_SOFTLIMIT_CW & 0x00ff0000)>>16;
 message[3]=(AZ_SOFTLIMIT_CW & 0x0000ff00)>>8;
-message[4]=AZ_SOFTLIMIT_CW  & 0x000000ff;
+message[2]=AZ_SOFTLIMIT_CW  & 0x000000ff;
 
-message[5]=(AZ_SOFTLIMIT_CW & 0x00ff0000)>>16;
+message[7]=(AZ_SOFTLIMIT_CW & 0x00ff0000)>>16;
 message[6]=(AZ_SOFTLIMIT_CW & 0x0000ff00)>>8;
-message[7]=AZ_SOFTLIMIT_CW  & 0x000000ff;
+message[5]=AZ_SOFTLIMIT_CW  & 0x000000ff;
 
-message[8]=(EL_SOFTLIMIT_UP & 0x00ff0000)>>16;
+message[10]=(EL_SOFTLIMIT_UP & 0x00ff0000)>>16;
 message[9]=(EL_SOFTLIMIT_UP & 0x0000ff00)>>8;
-message[10]=EL_SOFTLIMIT_UP & 0x000000ff;
+message[8]=EL_SOFTLIMIT_UP & 0x000000ff;
 
-message[11]=(EL_SOFTLIMIT_DOWN & 0x00ff0000)>>16;
+message[13]=(EL_SOFTLIMIT_DOWN & 0x00ff0000)>>16;
 message[12]=(EL_SOFTLIMIT_DOWN & 0x0000ff00)>>8;
-message[13]=EL_SOFTLIMIT_DOWN & 0x000000ff;
+message[11]=EL_SOFTLIMIT_DOWN & 0x000000ff;
 
 message[14]=SOFTLIMITS_MASK & 0b00001111;
 
-message[15]=(AZ_OFFSET & 0x00ff0000)>>16;
+message[17]=(AZ_OFFSET & 0x00ff0000)>>16;
 message[16]=(AZ_OFFSET & 0x0000ff00)>>8;
-message[17]=AZ_OFFSET & 0x000000ff;
+message[15]=AZ_OFFSET & 0x000000ff;
 
-message[18]=(EL_OFFSET & 0x00ff0000)>>16;
+message[20]=(EL_OFFSET & 0x00ff0000)>>16;
 message[19]=(EL_OFFSET & 0x0000ff00)>>8;
-message[20]=EL_OFFSET & 0x000000ff;
+message[18]=EL_OFFSET & 0x000000ff;
+
 message[21]=0x7f;
 
 

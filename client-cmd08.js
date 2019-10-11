@@ -4,7 +4,6 @@ var HOST='127.0.0.1';
 
 var dgram = require('dgram');
 var incmd = 8; // 0..11
-var target = 43210;
 var speed  = 0b00000001; 
 var cmd =incmd.toString(16); // 00..0a
 

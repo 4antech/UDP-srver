@@ -5,17 +5,17 @@ var HOST='127.0.0.1';
 var dgram = require('dgram');
 var incmd = 5; // 0..11
 var target = 123450;
-var speed  = 555; 
+var speed  = -555; 
 var cmd =incmd.toString(16); // 00..0a
 
 var message = new Buffer(8)
 message[0]=0x7e;
 message[1]=incmd;
-message[2]=(target & 0x00ff0000)>>16;
+message[4]=(target & 0x00ff0000)>>16;
 message[3]=(target & 0x0000ff00)>>8;
-message[4]=target  & 0x000000ff;
-message[5]=(speed  & 0xff00)>>8;
-message[6]=speed   & 0x00ff;
+message[2]=target  & 0x000000ff;
+message[6]=(speed  & 0xff00)>>8;
+message[5]=speed   & 0x00ff;
 message[7]=0x7f;
 
 var client = dgram.createSocket('udp4');

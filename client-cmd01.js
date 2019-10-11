@@ -11,11 +11,11 @@ var cmd =incmd.toString(16); // 00..0a
 var message = new Buffer(8)
 message[0]=0x7e;
 message[1]=incmd;
-message[2]=(target & 0x00ff0000)>>16;
+message[2]=target  & 0x000000ff;
 message[3]=(target & 0x0000ff00)>>8;
-message[4]=target  & 0x000000ff;
-message[5]=(speed  & 0xff00)>>8;
-message[6]=speed   & 0x00ff;
+message[4]=(target & 0x00ff0000)>>16;
+message[5]=speed   & 0x00ff;
+message[6]=(speed  & 0xff00)>>8;
 message[7]=0x7f;
 
 var client = dgram.createSocket('udp4');
