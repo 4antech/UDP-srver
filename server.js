@@ -1,16 +1,20 @@
-/// UDP server       ///////////////////////
-var version=191001.1
-var debug=1;
+/// UDP server bistrolet    ///////////////////////
+var version=200421.1
+var debug=2;
 var PORT = 9090;
 //var HOST = '172.22.22.102';
-var HOST='127.0.0.1';
+//var HOST='127.0.0.1';
+var HOST='192.162.132.124';
 var dgram = require('dgram');
 var server = dgram.createSocket('udp4');
+const fs = require("fs");
 ///////////////////////my function
 function consolelog(msg){
   if (debug) {
     ts = new Date();
-    console.log(ts.getTime()+'. ' + msg);
+    var textlog=(ts.getTime()+'. ' + msg);
+    console.log(textlog);
+    if (debug>1) fs.appendFileSync("./server.log", textlog);
   }
 }
 ///////////////////////my variables
@@ -647,8 +651,7 @@ server.on('message', function (message, remote) {
   }
   if (validstatus<0) {      //bad incoming packet
     msgResponse="\x7e\x0b\x01\x7f";        
-    msglog=("! error packet size:" + message.length +" for this command:["+
-      command.toString(16)+"]");  
+    msglog=("! error packet size:" + message.length +" for this command:[" + command.toString(16) + "]");  
   }
   if (validstatus>0) {      //packet & argument Ok!
     msglog=('* CMD Ok [' + command + ']');
