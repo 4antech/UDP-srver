@@ -1,10 +1,10 @@
-/// UDP server bistrolet    ///////////////////////
+/// UDP server pion-bistrolet    ///////////////////////
 var version=200421.1
 var debug=2;
 var PORT = 9090;
 //var HOST = '172.22.22.102';
 //var HOST='127.0.0.1';
-var HOST='192.162.132.124';
+var HOST='192.162.132.124'; // pumps
 var dgram = require('dgram');
 var server = dgram.createSocket('udp4');
 const fs = require("fs");
@@ -20,12 +20,14 @@ function consolelog(msg){
 ///////////////////////my variables
 
 //var msgResponse="init";
+//variable - flag-status of mooving drivs: 0-stay 1-mooving
 var statemove_el = 0;
 var statemove_az = 0;
+//variable - flag-status brake-stat 0-off 1-brake-on
+var statebrake_el = 0; //not used in pion
+var statebrake_az = 0; 
 
-var statebrake_el = 0;
-var statebrake_az = 0;
-
+//TODO: set to REAL DATA for device
 var  AZ_SOFTLIMIT_CW   = 10;
 var  AZ_SOFTLIMIT_CCW  = 20;
 var  EL_SOFTLIMIT_UP   = 30;
@@ -33,6 +35,10 @@ var  EL_SOFTLIMIT_DOWN = 40;
 var  SOFTLIMITS_MASK =15;
 var  AZ_OFFSET = 60;
 var  EL_OFFSET = 70;
+
+//END TODO----------------------------
+
+
 
 function xstop(){statemove_az=0;}
 function ystop(){statemove_el=0;}
@@ -90,7 +96,8 @@ function AZ_BRAKE() {       // 1 bytes
 var ts = new Date();
 var dmsg="";
 ///////////////////////////////////////////////////////
-function hexdump(msg){  
+
+function hexdump(msg){  //return string in
   var tmpstr='.';
   for (var i=0;i<msg.length;i++) {
     if (msg[i]<16 ) tmpstr+='0'+(msg[i].toString(16)) + '.';
@@ -99,6 +106,7 @@ function hexdump(msg){
   return tmpstr;
 }
 
+
 function num2hex1(num){if (num<255) return String.fromCharCode(num); }
 //TODO: dodelat
 function num2hex2(num){
@@ -106,7 +114,8 @@ function num2hex2(num){
 }
 function num2hex3(num){
 }
-//////////////////// Math
+
+//////////////////// Math & mech
 // Elevation
 const m=1860                         ;//              /|
 const n=720                          ;//             / |
@@ -145,6 +154,10 @@ function rad2div_neg(ang){return (rad2div(ang+Math.PI/2)-524288);}
 const shtok_min=720;   // zeta(720)=0.
 const shtok_max=3190;  // zeta(3190)= -30' ; zeta(3180)=+2'
 function shtoksize(z){ return Math.sqrt(r - p*Math.cos(pi05_phi-z));} //
+///////////////////////////////////////////////////////////////////////
+
+
+
 //////////////////////////////////// Verification incoming data
 function validation(cmd,message){
 //detection START-END Bytes 0x7e 0x7f
@@ -173,6 +186,7 @@ function validation(cmd,message){
 
 ///////// validating argument value range
 //TODO test Big-Litle Endian
+
   if (cmd==1){ //    AZ_MOVETO_CMD
     var target=(message[4]*256*256) + (message[3]*256) + message[2];
 //    if (message[2]>127) target=-(0x1000000-target);
@@ -242,50 +256,59 @@ function validation(cmd,message){
 //TODO: TEST positive|negative value?
     consolelog('* cmd=' + cmd +' args:');   
     
-    var  AZ_SOFTLIMIT_CW   = message[4]*256*256+message[3]*256+message[2];
-    consolelog('- AZ_SOFTLIMIT_CW='+AZ_SOFTLIMIT_CW);
+    var  zAZ_SOFTLIMIT_CW   = message[4]*256*256+message[3]*256+message[2];
+    consolelog('- AZ_SOFTLIMIT_CW='+zAZ_SOFTLIMIT_CW);
     
-    var  AZ_SOFTLIMIT_CCW  = message[7]*256*256+message[6]*256+message[5];
-    consolelog('- AZ_SOFTLIMIT_CCW='+AZ_SOFTLIMIT_CCW);
+    var  zAZ_SOFTLIMIT_CCW  = message[7]*256*256+message[6]*256+message[5];
+    consolelog('- AZ_SOFTLIMIT_CCW='+zAZ_SOFTLIMIT_CCW);
     
-    var  EL_SOFTLIMIT_UP   = message[10]*256*256+message[9]*256+message[8];
-    if (message[10]>127) EL_SOFTLIMIT_UP=-(0x1000000-EL_SOFTLIMIT_UP);
-    consolelog('- EL_SOFTLIMIT_UP='+EL_SOFTLIMIT_UP);
+    var  zEL_SOFTLIMIT_UP   = message[10]*256*256+message[9]*256+message[8];
+    if (message[10]>127) zEL_SOFTLIMIT_UP=-(0x1000000-zEL_SOFTLIMIT_UP);
+    consolelog('- EL_SOFTLIMIT_UP='+zEL_SOFTLIMIT_UP);
 
-    var  EL_SOFTLIMIT_DOWN = message[13]*256*256+message[12]*256+message[11];  
-    if (message[13]>127) EL_SOFTLIMIT_DOWN=-(0x1000000-EL_SOFTLIMIT_DOWN);
-    consolelog('- EL_SOFTLIMIT_DOWN='+EL_SOFTLIMIT_DOWN);
+    var  zEL_SOFTLIMIT_DOWN = message[13]*256*256+message[12]*256+message[11];  
+    if (message[13]>127) zEL_SOFTLIMIT_DOWN=-(0x1000000-zEL_SOFTLIMIT_DOWN);
+    consolelog('- EL_SOFTLIMIT_DOWN='+zEL_SOFTLIMIT_DOWN);
 
-    var  SOFTLIMITS_MASK   = message[14];
-    consolelog('- SOFTLIMITS_MASK='+SOFTLIMITS_MASK.toString(2));
+    var  zSOFTLIMITS_MASK   = message[14];
+    consolelog('- SOFTLIMITS_MASK='+zSOFTLIMITS_MASK.toString(2));
     
-    var  AZ_OFFSET = message[17]*256*256+message[16]*256+message[15];
-    var  EL_OFFSET = message[20]*256*256+message[19]*256+message[18];        
-    if (message[17]>127) AZ_OFFSET=-(0x1000000-AZ_OFFSET);
-    if (message[20]>127) EL_OFFSET=-(0x1000000-EL_OFFSET);
-    consolelog('- AZ_OFFSET='+AZ_OFFSET);
-    consolelog('- EL_OFFSET='+EL_OFFSET);
+    var  zAZ_OFFSET = message[17]*256*256+message[16]*256+message[15];
+    var  zEL_OFFSET = message[20]*256*256+message[19]*256+message[18];        
+    if (message[17]>127) zAZ_OFFSET=-(0x1000000-zAZ_OFFSET);
+    if (message[20]>127) zEL_OFFSET=-(0x1000000-zEL_OFFSET);
+    consolelog('- AZ_OFFSET='+zAZ_OFFSET);
+    consolelog('- EL_OFFSET='+zEL_OFFSET);
 
-    if (AZ_SOFTLIMIT_CW < 0       || 
-      AZ_SOFTLIMIT_CW > 1048576   ||
-      AZ_SOFTLIMIT_CCW < 0        || 
-      AZ_SOFTLIMIT_CCW >1048576   ||
-      EL_SOFTLIMIT_UP < -524288   ||
-      EL_SOFTLIMIT_UP > 524288    ||
-      EL_SOFTLIMIT_DOWN < -524288 ||
-      EL_SOFTLIMIT_DOWN > 524288  ||
-      SOFTLIMITS_MASK <0   ||
-      SOFTLIMITS_MASK >15  ||       
-      EL_OFFSET < -1048576 ||
-      EL_OFFSET > 1048576  ||
-      AZ_OFFSET < -1048576 ||
-      AZ_OFFSET > 1048576 ){   
+    if (zAZ_SOFTLIMIT_CW < 0       || 
+      zAZ_SOFTLIMIT_CW > 1048576   ||
+      zAZ_SOFTLIMIT_CCW < 0        || 
+      zAZ_SOFTLIMIT_CCW >1048576   ||
+      zEL_SOFTLIMIT_UP < -524288   ||
+      zEL_SOFTLIMIT_UP > 524288    ||
+      zEL_SOFTLIMIT_DOWN < -524288 ||
+      zEL_SOFTLIMIT_DOWN > 524288  ||
+      zSOFTLIMITS_MASK <0   ||
+      zSOFTLIMITS_MASK >15  ||       
+      zEL_OFFSET < -1048576 ||
+      zEL_OFFSET > 1048576  ||
+      zAZ_OFFSET < -1048576 ||
+      zAZ_OFFSET > 1048576 ){   
       consolelog('! ERROR Args valid range!'); 
       consolelog('! AZ_SOFTLIMIT_CW & AZ_SOFTLIMIT_CCW [0..1048576]'); 
       consolelog('! EL_SOFTLIMIT_UP & EL_SOFTLIMIT_DOWN [-524288..524288]'); 
       consolelog('! SOFTLIMIT_MASK [0..1111] bin'); 
       consolelog('! EL_OFFSET AZ_OFFSET [-1048576..1048576]'); 
       return 0;
+    }
+    else {
+      AZ_SOFTLIMIT_CW=zAZ_SOFTLIMIT_CW;
+      AZ_SOFTLIMIT_CCW=zAZ_SOFTLIMIT_CCW; 
+      EL_SOFTLIMIT_UP=zEL_SOFTLIMIT_UP; 
+      EL_SOFTLIMIT_DOWN=zEL_SOFTLIMIT_DOWN;
+      SOFTLIMITS_MASK=zSOFTLIMITS_MASK;
+      EL_OFFSET=zEL_OFFSET;
+      AZ_OFFSET=zAZ_OFFSET;
     }
   }
   return 1;
@@ -462,6 +485,7 @@ ETX - маркер конца пакета данных (код символа 0
 //  var   tmp='\x7e\x09\x02'+'1234567890123456789'+'\x7f';
   return outstr;
 };    //debug
+
 
 function goodanswer(cmd){  
   if (cmd!=0 && cmd!=9) {
@@ -671,8 +695,8 @@ server.on('message', function (message, remote) {
   });  
 });
 server.bind(PORT, HOST);
+consolelog('-----------------------------');
 
-console.log('-----------------------------');
 //for (var i=shtok_min;i<shtok_max;i++) consolelog(' '+i+' alp=' +(alpha(i)*180/Math.PI)+' zeta='+(zeta(i)*180/Math.PI));
 //console.log(shtoksize(0) + ' ' + shtoksize(Math.PI/2));
 //consolelog('rad 0   ='+rad2div(0)+'  0       ='+ div2rad(0));
