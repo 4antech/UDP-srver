@@ -159,29 +159,35 @@ function shtoksize(z){ return Math.sqrt(r - p*Math.cos(pi05_phi-z));} //
 
 
 //////////////////////////////////// Verification incoming data
+// returned errcode
+// good data           1
+// bad args            0
+// non-formated       -1
+// unknown command    -2
+// bad packet size    -3
 function validation(cmd,message){
 //detection START-END Bytes 0x7e 0x7f
   if (message[0]!=126 || message[message.length-1]!=127 ) return -1;//0x7e 0x7f
 
 //detection command number. valid range 0..10
   var cmd=message[1];
-  if (cmd<0 || cmd>10) return 0; //unknown command
+  if (cmd<0 || cmd>10) return -2; //unknown command
 
 //detection packet size
 //  var cmdsize=[3,8,8,5,5,8,8,4,4,3,22];
 //  if (cmdsize.cmd != message.length ) return 0; 
 //var cmdargs=[0,2,2,1,1,2,2,1,1,0,7];  
-  if (cmd==0 && message.length!=3) return 0; //eror size packet 1+1      +1=3. 0
-  if (cmd==1 && message.length!=8) return 0; //eror size packet 1+1+ 3+2 +1=8. 2
-  if (cmd==2 && message.length!=8) return 0; //eror size packet 1+1+ 3+2 +1=8. 2
-  if (cmd==3 && message.length!=5) return 0; //eror size packet 1+1+ 2   +1=5. 1
-  if (cmd==4 && message.length!=5) return 0; //eror size packet 1+1+ 2   +1=5. 1
-  if (cmd==5 && message.length!=8) return 0; //eror size packet 1+1+ 3+2 +1=8. 2
-  if (cmd==6 && message.length!=8) return 0; //eror size packet 1+1+ 3+2 +1=8. 2
-  if (cmd==7 && message.length!=4) return 0; //eror size packet 1+1+ 1   +1=4. 1
-  if (cmd==8 && message.length!=4) return 0; //eror size packet 1+1+ 1   +1=4. 1
-  if (cmd==9 && message.length!=3) return 0; //eror size packet 1+1      +1=3. 0
-  if (cmd==10 && message.length!=22) return 0; //eror 1+1+3+3+3+3+1+3+3  +1=22 7
+  if (cmd==0 && message.length!=3) return -3; //eror size packet 1+1      +1=3. 0
+  if (cmd==1 && message.length!=8) return -3; //eror size packet 1+1+ 3+2 +1=8. 2
+  if (cmd==2 && message.length!=8) return -3; //eror size packet 1+1+ 3+2 +1=8. 2
+  if (cmd==3 && message.length!=5) return -3; //eror size packet 1+1+ 2   +1=5. 1
+  if (cmd==4 && message.length!=5) return -3; //eror size packet 1+1+ 2   +1=5. 1
+  if (cmd==5 && message.length!=8) return -3; //eror size packet 1+1+ 3+2 +1=8. 2
+  if (cmd==6 && message.length!=8) return -3; //eror size packet 1+1+ 3+2 +1=8. 2
+  if (cmd==7 && message.length!=4) return -3; //eror size packet 1+1+ 1   +1=4. 1
+  if (cmd==8 && message.length!=4) return -3; //eror size packet 1+1+ 1   +1=4. 1
+  if (cmd==9 && message.length!=3) return -3; //eror size packet 1+1      +1=3. 0
+  if (cmd==10 && message.length!=22) return -3; //eror 1+1+3+3+3+3+1+3+3  +1=22 7
 ///////// packetsize ok! 
 
 ///////// validating argument value range
@@ -613,7 +619,7 @@ function startcommand(message){
                                   // [AZ_OFFSET]      3 bytes -1048576..1048576   
                                   // [EL_OFFSET]      3 bytes -1048576..1048576
     SOFTLIMITS_MASK   = message[14];
-    var cw =(SOFTLIMITS_MASK  & 0b00000001); // bit 0
+    var cw =(SOFTLIMITS_MASK  & 0b00000001);    // bit 0
     var ccw=(SOFTLIMITS_MASK  & 0b00000010)>>1; // bit 1
     var up =(SOFTLIMITS_MASK  & 0b00000100)>>2; // bit 2
     var down=(SOFTLIMITS_MASK & 0b00001000)>>3; // bit 3  
@@ -666,6 +672,13 @@ server.on('message', function (message, remote) {
   var msglog='';
   consolelog('< rcv from ' + remote.address + ':' + remote.port + 
   ' - [' + hexdump(message) + ']');
+
+// validation code:
+// good data           1
+// bad args            0
+// non-formated       -1
+// unknown command    -2
+// bad packet size    -3
   var command=message[1];
   var validstatus=validation(command,message);
   if (validstatus==0) {     //bad argument
@@ -673,11 +686,21 @@ server.on('message', function (message, remote) {
       "\x01\x7f";//String.fromCharCode(command)
       msglog=("! Error packet args ["+ hexdump(message) +"]");
   }
-  if (validstatus<0) {      //bad incoming packet
+
+  if (validstatus==-1) {      //bad incoming packet
+    msgResponse="\x7e\x0b\x01\x7f";        
+    msglog=("! error packet format" );  
+  }
+  if (validstatus==-2) {      //bad incoming packet
+    msgResponse="\x7e\x0b\x01\x7f";        
+    msglog=("! unknown command: [" + command.toString(16) + "]");  
+  }
+  if (validstatus==-3) {      //bad incoming packet
     msgResponse="\x7e\x0b\x01\x7f";        
     msglog=("! error packet size:" + message.length +" for this command:[" + command.toString(16) + "]");  
   }
-  if (validstatus>0) {      //packet & argument Ok!
+
+  if (validstatus==1) {      //packet & argument Ok!
     msglog=('* CMD Ok [' + command + ']');
     msgResponse=goodanswer(command);
     startcommand(message);
