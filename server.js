@@ -1,22 +1,33 @@
 /// UDP server pion-bistrolet    ///////////////////////
 var version=200421.1
-var debug=2;
+var debug=3;
 var PORT = 9090;
 //var HOST = '172.22.22.102';
-//var HOST='127.0.0.1';
-var HOST='192.162.132.124'; // pumps
+var HOST='127.0.0.1';
+//var HOST='192.162.132.124'; // pumps
 var dgram = require('dgram');
 var server = dgram.createSocket('udp4');
 const fs = require("fs");
 ///////////////////////my function
+//function consolelog(msg){
+//  if (debug) {
+//    ts = new Date();
+//    var textlog=(ts.getTime()+'. ' + msg);
+//    console.log(textlog);
+//    if (debug>1) fs.appendFileSync("./server.log", textlog);
+//  }
+//}
 function consolelog(msg){
   if (debug) {
     ts = new Date();
     var textlog=(ts.getTime()+'. ' + msg);
-    console.log(textlog);
+    console.log(textlog)
+    if (debug>2) textlog=textlog+' <br>';
+    textlog=textlog+'\n';
     if (debug>1) fs.appendFileSync("./server.log", textlog);
   }
 }
+
 ///////////////////////my variables
 
 //var msgResponse="init";
