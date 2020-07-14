@@ -3,8 +3,8 @@ var version=200421.1
 var debug=3;
 var PORT = 9090;
 //var HOST = '172.22.22.102';
-var HOST='127.0.0.1';
-//var HOST='192.162.132.124'; // pumps
+//var HOST='127.0.0.1';
+var HOST='192.162.132.124'; // pumps
 var dgram = require('dgram');
 var server = dgram.createSocket('udp4');
 const fs = require("fs");
@@ -202,8 +202,8 @@ function validation(cmd,message){
 ///////// packetsize ok! 
 
 ///////// validating argument value range
-//TODO test Big-Litle Endian
 
+//TODO test Big-Litle Endian
   if (cmd==1){ //    AZ_MOVETO_CMD
     var target=(message[4]*256*256) + (message[3]*256) + message[2];
 //    if (message[2]>127) target=-(0x1000000-target);
@@ -410,9 +410,9 @@ function getdata0(){
 //  [AZ_COORD]       3
 //  [EL_COORD]       3
 //  [AZ_SPEED]       2
-//  [EL_SPEED]       2                                                      
-//  [AZ_DRIVESTATE]  1 
-//  [EL_DRIVESTATE]  1 
+//  [EL_SPEED]       2
+//  [AZ_DRIVESTATE]  1
+//  [EL_DRIVESTATE]  1
 //  [AZ_LIMITS]      1
 //  [EL_LIMITS]      1
 //  [AZ_ERRORS]      1
@@ -697,18 +697,17 @@ server.on('message', function (message, remote) {
       "\x01\x7f";//String.fromCharCode(command)
       msglog=("! Error packet args ["+ hexdump(message) +"]");
   }
-
   if (validstatus==-1) {      //bad incoming packet
-    msgResponse="\x7e\x0b\x01\x7f";        
-    msglog=("! error packet format" );  
+    msgResponse="\x7e\x0b\x01\x7f";
+    msglog=("! error packet format ["+ hexdump(message) +"]" + "TXT{" + message +"}");
   }
   if (validstatus==-2) {      //bad incoming packet
-    msgResponse="\x7e\x0b\x01\x7f";        
-    msglog=("! unknown command: [" + command.toString(16) + "]");  
+    msgResponse="\x7e\x0b\x01\x7f";
+    msglog=("! unknown command: [" + command.toString(16) + "]");
   }
   if (validstatus==-3) {      //bad incoming packet
-    msgResponse="\x7e\x0b\x01\x7f";        
-    msglog=("! error packet size:" + message.length +" for this command:[" + command.toString(16) + "]");  
+    msgResponse="\x7e\x0b\x01\x7f";
+    msglog=("! error packet size:" + message.length +" for this command:[" + command.toString(16) + "]");
   }
 
   if (validstatus==1) {      //packet & argument Ok!
@@ -717,16 +716,16 @@ server.on('message', function (message, remote) {
     startcommand(message);
   }
   consolelog(msglog +' from ' + remote.address + ':' + remote.port);
-  packetResponse=new Buffer(msgResponse);  
-  
+  packetResponse=new Buffer(msgResponse);
+
 ///////// response function
   server.send(packetResponse, 0, packetResponse.length, remote.port, 
   remote.address, function(err, bytes) {
     if (err) throw err;
-    consolelog('> snt UDP server message response to ' + remote.address + ':' + 
+    consolelog('> snt UDP server message response to ' + remote.address + ':' +
       remote.port +' [' + hexdump(packetResponse) + ']');
     consolelog('____________');
-  });  
+  });
 });
 server.bind(PORT, HOST);
 consolelog('-----------------------------');

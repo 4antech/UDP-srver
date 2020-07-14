@@ -3,7 +3,7 @@
 var debug=1;
 var ver='190930-01'
 var PORT = 9090;
-var HOST='127.0.0.1';
+var HOST='pumps.lora-wan.net';
 var dgram = require('dgram');
 var maxtime=300;
 var g_cnt=maxtime;
