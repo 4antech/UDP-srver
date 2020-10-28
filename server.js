@@ -183,7 +183,7 @@ function validation(cmd,message){
 
 //detection packet size
   var cmdsize=[3,8,8,5,5,8,8,4,4,3,22];
-  if (cmdsize[cmd] != message.length ) return 0;
+  if (cmdsize[cmd] != message.length ) return -3;
 //var cmdargs=[0,2,2,1,1,2,2,1,1,0,7];  
 //  if (cmd==0 && message.length!=3) return -3; //eror size packet 1+1      +1=3. 0
 //  if (cmd==1 && message.length!=8) return -3; //eror size packet 1+1+ 3+2 +1=8. 2
