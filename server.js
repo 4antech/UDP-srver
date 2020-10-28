@@ -182,20 +182,20 @@ function validation(cmd,message){
   if (cmd<0 || cmd>10) return -2; //unknown command
 
 //detection packet size
-//  var cmdsize=[3,8,8,5,5,8,8,4,4,3,22];
-//  if (cmdsize.cmd != message.length ) return 0; 
+  var cmdsize=[3,8,8,5,5,8,8,4,4,3,22];
+  if (cmdsize[cmd] != message.length ) return 0;
 //var cmdargs=[0,2,2,1,1,2,2,1,1,0,7];  
-  if (cmd==0 && message.length!=3) return -3; //eror size packet 1+1      +1=3. 0
-  if (cmd==1 && message.length!=8) return -3; //eror size packet 1+1+ 3+2 +1=8. 2
-  if (cmd==2 && message.length!=8) return -3; //eror size packet 1+1+ 3+2 +1=8. 2
-  if (cmd==3 && message.length!=5) return -3; //eror size packet 1+1+ 2   +1=5. 1
-  if (cmd==4 && message.length!=5) return -3; //eror size packet 1+1+ 2   +1=5. 1
-  if (cmd==5 && message.length!=8) return -3; //eror size packet 1+1+ 3+2 +1=8. 2
-  if (cmd==6 && message.length!=8) return -3; //eror size packet 1+1+ 3+2 +1=8. 2
-  if (cmd==7 && message.length!=4) return -3; //eror size packet 1+1+ 1   +1=4. 1
-  if (cmd==8 && message.length!=4) return -3; //eror size packet 1+1+ 1   +1=4. 1
-  if (cmd==9 && message.length!=3) return -3; //eror size packet 1+1      +1=3. 0
-  if (cmd==10 && message.length!=22) return -3; //eror 1+1+3+3+3+3+1+3+3  +1=22 7
+//  if (cmd==0 && message.length!=3) return -3; //eror size packet 1+1      +1=3. 0
+//  if (cmd==1 && message.length!=8) return -3; //eror size packet 1+1+ 3+2 +1=8. 2
+//  if (cmd==2 && message.length!=8) return -3; //eror size packet 1+1+ 3+2 +1=8. 2
+//  if (cmd==3 && message.length!=5) return -3; //eror size packet 1+1+ 2   +1=5. 1
+//  if (cmd==4 && message.length!=5) return -3; //eror size packet 1+1+ 2   +1=5. 1
+//  if (cmd==5 && message.length!=8) return -3; //eror size packet 1+1+ 3+2 +1=8. 2
+//  if (cmd==6 && message.length!=8) return -3; //eror size packet 1+1+ 3+2 +1=8. 2
+//  if (cmd==7 && message.length!=4) return -3; //eror size packet 1+1+ 1   +1=4. 1
+//  if (cmd==8 && message.length!=4) return -3; //eror size packet 1+1+ 1   +1=4. 1
+//  if (cmd==9 && message.length!=3) return -3; //eror size packet 1+1      +1=3. 0
+//  if (cmd==10 && message.length!=22) return -3; //eror 1+1+3+3+3+3+1+3+3  +1=22 7
 ///////// packetsize ok! 
 
 ///////// validating argument value range
@@ -464,7 +464,7 @@ ETX - маркер конца пакета данных (код символа 0
 //  [EL_OFFSET]         3
 //  ETX                 1=7f
   // E=23Byte
-  var outstr = new Buffer(23)
+  var outstr = new Buffer.from(23)
   outstr[0]=0x7e;
   outstr[1]=9;
   outstr[2]=2;
@@ -503,7 +503,7 @@ ETX - маркер конца пакета данных (код символа 0
 
 function goodanswer(cmd){  
   if (cmd!=0 && cmd!=9) {
-    var answer = new Buffer(4)
+    var answer = new Buffer.from(4)
     answer[0]=0x7e;
     answer[1]=cmd;
     answer[2]=0;
@@ -676,7 +676,7 @@ server.on('listening', function () {
   address.port);
 });
 server.on('message', function (message, remote) {
-  var packetResponse=new Buffer('');
+  var packetResponse=new Buffer.from('');
   var msglog='';
   consolelog('< rcv from ' + remote.address + ':' + remote.port + 
   ' - [' + hexdump(message) + ']');
@@ -714,7 +714,7 @@ server.on('message', function (message, remote) {
     startcommand(message);
   }
   consolelog(msglog +' from ' + remote.address + ':' + remote.port);
-  packetResponse=new Buffer(msgResponse);  
+  packetResponse=new Buffer.from(msgResponse);  
   
 ///////// response function
   server.send(packetResponse, 0, packetResponse.length, remote.port, 
