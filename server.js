@@ -1,4 +1,4 @@
-/// UDP server pion-bistrolet    ///////////////////////
+/// UDP server pion    ///////////////////////
 var version=200421.1
 var debug=3;
 var PORT = 9090;
@@ -7,6 +7,8 @@ var HOST='127.0.0.1';
 //var HOST='192.162.132.124'; // pumps
 var dgram = require('dgram');
 var server = dgram.createSocket('udp4');
+const IDENCAZ=1;
+const IDENCEL=2;
 const fs = require("fs");
 ///////////////////////my function
 //function consolelog(msg){
@@ -27,8 +29,49 @@ function consolelog(msg){
     if (debug>1) fs.appendFileSync("./server.log", textlog);
   }
 }
+///////////////////////////
+const SerialPort = require('serialport')
+const parsers = SerialPort.parsers
+// motors id (3,4) 6. encoders 5,7
+encoders = Array();
+encoders[15] = 1;
+encoders[16] = 1;
+const parser = new parsers.Readline({delimiter: '\n'});
+const port = new SerialPort('/dev/serial0', {baudRate: 921600});
 
 ///////////////////////my variables
+var azimuth = {
+  speed:0,
+  movestate: 0,
+  ts: 0,
+  _angl: 0,
+  get angl(){ return this._angl;},
+  set angl(value) {
+    if (value>=0 && value <=1048576) {
+      this._angl=value;
+      sts=new Date();
+      azimuth.ts =(sts.getTime())&0xffffffff;
+    }
+    else {consolelog("! AZIMUTH error set value:"+value);return 0}
+  }  
+};
+
+var ele = {
+  movestate: 0,
+  speed:0,
+  ts: 0,
+  _angl:0,
+  get angl(){return this._angl;},
+  set angl(value) {
+    if (value>=0 && value <=1048576) {
+      this._angl=value;
+      sts=new Date();
+      ele.ts =sts.getTime();
+    }
+    else {consolelog("! ELEVATION error set value:"+value);return 0}
+  }  
+};
+
 //var msgResponse="init";
 //variable - flag-status of mooving drivs: 0-stay 1-mooving
 var statemove_el = 0;
@@ -43,13 +86,39 @@ var  AZ_SOFTLIMIT_CCW  = 20;
 var  EL_SOFTLIMIT_UP   = 30;
 var  EL_SOFTLIMIT_DOWN = 40;
 var  SOFTLIMITS_MASK =15;
-var  AZ_OFFSET = 60;
-var  EL_OFFSET = 70;
+var  AZ_OFFSET = 0;
+var  EL_OFFSET = 0;
 
 //END TODO----------------------------
 
-function xstop(){statemove_az=0;}
-function ystop(){statemove_el=0;}
+//////////////////////////////////////////////////////////////////////
+////by Stas////////////////////////////////////////////////////////////
+port.pipe(parser);
+port.on('open', () => {
+  consolelog('# Port open send init');
+  port.write("1|11|15|z\n"); // INIT CAN AND OTHERS...
+  parser.on('data', data=>{ 
+    p = data.split("|");
+    if (p[0]=="2"){
+      if (p[1]==IDENCAZ) azimuth.angl=p[2];
+      if (p[1]==IDENCEL) ele.angl=p[2];
+      encoders[p[1]] = p[2]; // p[1] - ID encodera p[2] - position
+      var hrTime = process.hrtime();
+//      ()=> {console.log(encoders[0]) }; //    Событие изменения координат
+    } 
+  });
+});
+
+function readenc(a) {return encoders[a];}
+function roll(id,vector,speed) {port.write("2|"+id+"|"+vector+"|"+speed);} //  id = [3,4, 6] vector = [1,0] speed = 0-100
+
+////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////
+
+
+
+function xstop(){roll(3,0,0);statemove_az=0;}
+function ystop(){roll(6,0,0);statemove_el=0;}
 function xgoto(target,speed){statemove_az=1;}
 function ygoto(target,speed){statemove_el=1;}
 function xbrake(arg){}
